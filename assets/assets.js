@@ -16,6 +16,7 @@ import twitter_icon from "./twitter_icon.svg";
 import box_icon from "./box_icon.svg";
 import menu_icon from "./menu_icon.svg";
 import jbl_soundbox_image from "./jbl_soundbox_image.png";
+import arrow_icon from "./arrow_icon.svg"
 
 export const assets = {
   logo,
@@ -25,10 +26,10 @@ export const assets = {
   task3,
   task4,
   task5,
+  arrow_icon,
   bg,
   bg1,
   bg2,
- 
   user_icon,
   add_icon,
   instagram_icon,
