@@ -9,6 +9,8 @@ import bg from "./bg.jpg";
 import bg1 from "./bg1.jpg";
 import bg2 from "./bg2.jpg";
 import user_icon from "./user_icon.svg";
+import product_list_icon from "./product_list_icon.svg";
+import order_icon from "./order_icon.svg";
 import add_icon from "./add_icon.png";
 import instagram_icon from "./instagram_icon.svg";
 import facebook_icon from "./facebook_icon.svg";
@@ -27,6 +29,8 @@ export const assets = {
   task4,
   task5,
   arrow_icon,
+  product_list_icon,
+  order_icon,
   bg,
   bg1,
   bg2,
