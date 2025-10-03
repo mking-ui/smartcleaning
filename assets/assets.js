@@ -36,7 +36,6 @@ export const assets = {
   twitter_icon,
   box_icon,
   menu_icon,
-  redirect_icon,
   jbl_soundbox_image,
 };
 
