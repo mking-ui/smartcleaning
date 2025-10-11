@@ -2,51 +2,66 @@
 import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import { assets } from "@/assets/assets";
-import { useAppContext } from "@/context/AppContext";
 import Footer from "@/components/supervisor/Footer";
 import Loading from "@/components/Loading";
+import { useRouter } from "next/navigation";
 
 const PendingReports = () => {
-  const { router } = useAppContext();
-
+  const router = useRouter();
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedReport, setSelectedReport] = useState(null); // For modal
+  const [selectedReport, setSelectedReport] = useState(null);
+
+  // Load cached pending reports first
+  useEffect(() => {
+    const cached = localStorage.getItem("pendingReports");
+    if (cached) {
+      setReports(JSON.parse(cached));
+      setLoading(false);
+    }
+    fetchReports(); // Fetch fresh data in background
+  }, []);
 
   const fetchReports = async () => {
-    // Dummy reports
-    const dummyReports = [
-      {
-        _id: 1,
-        reporter: "John Doe",
-        jobType: "Office Cleaning",
-        location: "Kaduna",
-        gmap: "https://maps.google.com/example",
-        description: "Office desk and floor cleaning request",
-        image: [assets.upload_area, assets.upload_area],
-        status: "pending",
-        date: new Date(),
-      },
-      {
-        _id: 2,
-        reporter: "Mary Jane",
-        jobType: "Home Cleaning",
-        location: "Zaria",
-        gmap: "https://maps.google.com/example2",
-        description: "Kitchen cleaning and waste disposal",
-        image: [assets.upload_area],
-        status: "resolved",
-        date: new Date(),
-      },
-    ];
+    try {
+      const res = await fetch("/api/report/pending", {
+        method: "GET",
+        credentials: "include"
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message);
 
-    setReports(dummyReports.filter((r) => r.status === "pending"));
-    setLoading(false);
+      setReports(data.reports);
+      localStorage.setItem("pendingReports", JSON.stringify(data.reports));
+    } catch (error) {
+      console.error("Failed to fetch pending reports:", error.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  useEffect(() => {
-    fetchReports();
-  }, []);
+  const handleApprove = async () => {
+    try {
+      const res = await fetch("/api/report/update", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ reportId: selectedReport._id })
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message);
+
+      // Remove approved report from list and update cache
+      const updated = reports.filter((r) => r._id !== selectedReport._id);
+      setReports(updated);
+      localStorage.setItem("pendingReports", JSON.stringify(updated));
+      setSelectedReport(null);
+    } catch (error) {
+      console.error("Approval failed:", error.message);
+    }
+  };
 
   return (
     <div className="flex-1 h-screen overflow-scroll flex flex-col justify-between text-sm">
@@ -64,10 +79,10 @@ const PendingReports = () => {
                 >
                   {/* Reporter Info & Images */}
                   <div className="flex-1 flex gap-5 max-w-80">
-                    {report.image[0] ? (
+                    {report.images?.[0]?.url ? (
                       <Image
                         className="max-w-16 max-h-16 object-cover rounded"
-                        src={report.image[0]}
+                        src={report.images[0].url}
                         alt="report_image"
                         width={64}
                         height={64}
@@ -84,6 +99,9 @@ const PendingReports = () => {
                     <p className="flex flex-col gap-2">
                       <span className="font-medium">{report.jobType}</span>
                       <span className="text-gray-600">{report.description}</span>
+                      <span className="text-red-500 text-xs font-semibold">
+                        Urgency: {report.urgency}
+                      </span>
                       <span className="px-2 py-1 rounded text-xs bg-yellow-200 text-yellow-800 w-fit">
                         Pending
                       </span>
@@ -93,12 +111,12 @@ const PendingReports = () => {
                   {/* Reporter & Location */}
                   <div>
                     <p>
-                      <span className="font-medium">{report.reporter}</span>
+                      <span className="font-medium">{report.reporterName}</span>
                       <br />
                       <span>{report.location}</span>
                       <br />
                       <a
-                        href={report.gmap}
+                        href={report.googleLocation}
                         target="_blank"
                         className="text-blue-500 underline"
                       >
@@ -115,7 +133,7 @@ const PendingReports = () => {
                   {/* Date & View */}
                   <div className="flex flex-col items-start gap-2">
                     <span>
-                      Date: {new Date(report.date).toLocaleDateString()}
+                      Date: {new Date(report.createdAt).toLocaleDateString()}
                     </span>
                     <button
                       onClick={() => setSelectedReport(report)}
@@ -143,17 +161,16 @@ const PendingReports = () => {
             >
               ✕
             </button>
-
             <h2 className="text-lg font-bold mb-3">{selectedReport.jobType}</h2>
             <p className="mb-2">{selectedReport.description}</p>
             <p className="mb-2">
-              <strong>Reporter:</strong> {selectedReport.reporter}
+              <strong>Reporter:</strong> {selectedReport.reporterName}
             </p>
             <p className="mb-2">
               <strong>Location:</strong> {selectedReport.location}
             </p>
             <a
-              href={selectedReport.gmap}
+              href={selectedReport.googleLocation}
               target="_blank"
               className="text-blue-600 underline mb-3 block"
             >
@@ -162,10 +179,10 @@ const PendingReports = () => {
 
             {/* Images */}
             <div className="grid grid-cols-2 gap-3 mb-4">
-              {selectedReport.image.map((img, idx) => (
+              {selectedReport.images.map((img, idx) => (
                 <Image
                   key={idx}
-                  src={img}
+                  src={img.url}
                   alt={`report_img_${idx}`}
                   width={200}
                   height={200}
@@ -176,7 +193,7 @@ const PendingReports = () => {
 
             {/* Approve button */}
             <button
-              onClick={() => router.push("/supervisor/approved")}
+              onClick={handleApprove}
               className="w-full py-2 bg-green-600 text-white rounded hover:bg-green-700"
             >
               Approve
@@ -184,7 +201,6 @@ const PendingReports = () => {
           </div>
         </div>
       )}
-
       <Footer />
     </div>
   );

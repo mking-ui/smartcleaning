@@ -10,7 +10,6 @@ const SideBar = () => {
 
         { name: 'Overview', path: '/supervisor', icon: assets.product_list_icon },
         { name: 'Manage Report', path: '/supervisor/reports', icon: assets.add_icon },
-        { name: 'Approved Report', path: '/supervisor/approved', icon: assets.product_list_icon },
         { name: 'Pending Report', path: '/supervisor/pending', icon: assets.add_icon },
         { name: 'In-progress', path: '/supervisor/progress', icon: assets.add_icon },
         { name: 'Completed', path: '/supervisor/complete', icon: assets.add_icon },

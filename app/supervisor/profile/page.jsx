@@ -1,22 +1,46 @@
 "use client";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import { assets } from "@/assets/assets";
+import Loading from "@/components/Loading";
 
-const SupervisorProfile = ({ user }) => {
+const SupervisorProfile = () => {
+  const [supervisor, setSupervisor] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+
+
+  const fetchSupervisor = async () => {
+    try {
+      const res = await fetch("/api/supervisor");
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message);
+      setSupervisor(data.supervisor || []);
+    } catch (error) {
+      setError("Something went wrong while loading data");
+    } finally {
+      setLoading(false);
+    }
+  };
+  useEffect(() => {
+    fetchSupervisor();
+  }, []);
+
+  if (loading) return <Loading />;
+
   return (
     <div className="flex-1 min-h-screen bg-slate-100 p-6 md:p-10">
       <div className="bg-white shadow-xl max-w-md mx-auto rounded-lg overflow-hidden">
         {/* Profile Picture */}
         <div className="flex flex-col items-center p-6 bg-emerald-900 text-white">
           <Image
-            src={user?.profilePic || assets.upload_area}
+            src={supervisor?.profilePic || assets.user_icon}
             alt="Supervisor"
             width={100}
             height={100}
             className="w-24 h-24 rounded-full object-cover border-4 border-yellow-400"
           />
-          <h2 className="mt-3 text-xl font-bold">{user?.fullName}</h2>
+          <h2 className="mt-3 text-xl font-bold">{supervisor?.fullName}</h2>
           <p className="text-yellow-300 text-sm">Supervisor</p>
         </div>
 
@@ -24,19 +48,19 @@ const SupervisorProfile = ({ user }) => {
         <div className="p-6 space-y-4">
           <div className="border-b pb-2">
             <p className="text-gray-600 text-sm">Username</p>
-            <p className="font-semibold">{user?.username}</p>
+            <p className="font-semibold">{supervisor?.username}</p>
           </div>
           <div className="border-b pb-2">
             <p className="text-gray-600 text-sm">Email</p>
-            <p className="font-semibold">{user?.email}</p>
+            <p className="font-semibold">{supervisor?.email}</p>
           </div>
           <div className="border-b pb-2">
             <p className="text-gray-600 text-sm">Phone</p>
-            <p className="font-semibold">{user?.phone}</p>
+            <p className="font-semibold">{supervisor?.phone}</p>
           </div>
         </div>
 
-        {/* Footer Action (Optional) */}
+        {/* Footer Action */}
         <div className="p-4 bg-gray-50 text-center">
           <button className="bg-yellow-400 text-emerald-900 px-6 py-2 rounded font-semibold hover:opacity-90 transition">
             Manage Reports

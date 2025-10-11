@@ -2,60 +2,54 @@
 import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import { assets } from "@/assets/assets";
-import { useAppContext } from "@/context/AppContext";
 import Loading from "@/components/Loading";
 import Footer from "@/components/report/Footer";
+import { useRouter } from "next/navigation";
 
 const ReportHistory = () => {
-  const { router } = useAppContext();
-
+  const router = useRouter();
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchReports = async () => {
-    // Dummy reports data
-    const dummyReports = [
-      {
-        _id: 1,
-        reporter: "John Doe",
-        jobType: "Office Cleaning",
-        location: "Kaduna",
-        gmap: "https://maps.google.com/example",
-        description: "Office desk and floor cleaning request",
-        image: [assets.upload_area, assets.upload_area],
-        status: "pending", // pending | resolved
-        date: new Date(),
-      },
-      {
-        _id: 2,
-        reporter: "Mary Jane",
-        jobType: "Home Cleaning",
-        location: "Zaria",
-        gmap: "https://maps.google.com/example2",
-        description: "Kitchen cleaning and waste disposal",
-        image: [assets.upload_area],
-        status: "resolved",
-        date: new Date(),
-      },
-    ];
-    setReports(dummyReports);
-    setLoading(false);
-  };
-
+  // Load cached history first
   useEffect(() => {
-    fetchReports();
+    const cached = localStorage.getItem("reportHistory");
+    if (cached) {
+      setReports(JSON.parse(cached));
+      setLoading(false);
+    }
+    fetchReports(); // Fetch fresh data in background
   }, []);
 
-  // Badge for Supervisor side
+  const fetchReports = async () => {
+    try {
+      const res = await fetch("/api/history", {
+        method: "GET",
+        credentials: "include"
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message);
+
+      setReports(data.reports);
+      localStorage.setItem("reportHistory", JSON.stringify(data.reports));
+    } catch (error) {
+      console.error("Failed to fetch reports:", error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const getBadge = (status) => {
-    if (status === "pending") {
+    const normalized = status?.toLowerCase() || "pending";
+    if (normalized === "pending") {
       return (
         <span className="px-2 py-1 rounded text-xs bg-yellow-200 text-yellow-800">
           Pending (Waiting for Approval)
         </span>
       );
     }
-    if (status === "resolved") {
+    if (normalized === "resolved") {
       return (
         <span className="px-2 py-1 rounded text-xs bg-green-200 text-green-800">
           Approved
@@ -64,10 +58,10 @@ const ReportHistory = () => {
     }
   };
 
-  // Cleaner (sender) side view
   const getSenderStatus = (status) => {
-    if (status === "pending") return "Waiting";   // changed from Received → Waiting
-    if (status === "resolved") return "Approved"; // changed from Completed → Approved
+    const normalized = status?.toLowerCase() || "pending";
+    if (normalized === "pending") return "Waiting";
+    if (normalized === "resolved") return "Approved";
     return "";
   };
 
@@ -79,17 +73,19 @@ const ReportHistory = () => {
         <div className="md:p-10 p-4 space-y-5">
           <h2 className="text-lg font-medium">Report History</h2>
           <div className="max-w-4xl rounded-md">
-            {reports.map((report, index) => (
+
+            {reports.length > 0 ? (
+            reports.map((report, index) => (
               <div
                 key={index}
                 className="flex flex-col md:flex-row gap-5 justify-between p-5 border-t border-gray-300"
               >
                 {/* Reporter Info & Images */}
                 <div className="flex-1 flex gap-5 max-w-80">
-                  {report.image[0] ? (
+                  {report.images?.[0]?.url ? (
                     <Image
                       className="max-w-16 max-h-16 object-cover rounded"
-                      src={report.image[0]}
+                      src={report.images[0].url}
                       alt="report_image"
                       width={64}
                       height={64}
@@ -106,6 +102,9 @@ const ReportHistory = () => {
                   <p className="flex flex-col gap-2">
                     <span className="font-medium">{report.jobType}</span>
                     <span className="text-gray-600">{report.description}</span>
+                    <span className="text-red-500 text-xs font-semibold">
+                      Urgency: {report.urgency}
+                    </span>
                     <span>{getBadge(report.status)}</span>
                   </p>
                 </div>
@@ -113,12 +112,12 @@ const ReportHistory = () => {
                 {/* Reporter & Location */}
                 <div>
                   <p>
-                    <span className="font-medium">{report.reporter}</span>
+                    <span className="font-medium">{report.reporterName}</span>
                     <br />
                     <span>{report.location}</span>
                     <br />
                     <a
-                      href={report.gmap}
+                      href={report.googleLocation}
                       target="_blank"
                       className="text-blue-500 underline"
                     >
@@ -136,13 +135,18 @@ const ReportHistory = () => {
                 <div>
                   <p className="flex flex-col">
                     <span>
-                      Date: {new Date(report.date).toLocaleDateString()}
+                      Date: {new Date(report.createdAt).toLocaleDateString()}
                     </span>
-                    <span>Sender: {getSenderStatus(report.status)}</span>
+                    <span>Status: {getSenderStatus(report.status)}</span>
                   </p>
                 </div>
               </div>
-            ))}
+            ))): (
+              <p className="text-gray-500">No reports found.</p>
+          
+          )}
+
+
           </div>
         </div>
       )}

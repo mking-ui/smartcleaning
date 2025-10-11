@@ -1,7 +1,11 @@
 "use client";
-import React, { useState } from "react";
 
-const RegisterForm = ({ isOpen, onClose }) => {
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import React, { useState } from "react";
+import toast from "react-hot-toast";
+
+const RegisterFormPage = () => {
   const [role, setRole] = useState("Reporter");
   const [firstName, setFirstName] = useState("");
   const [surname, setSurname] = useState("");
@@ -12,42 +16,73 @@ const RegisterForm = ({ isOpen, onClose }) => {
   const [verifyPassword, setVerifyPassword] = useState("");
   const [agree, setAgree] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [isSubmiting, setIsSubmiting] = useState(false);
+  const router = useRouter();
+
 
   const handleSubmit = (e) => {
+    setIsSubmiting(true)
     e.preventDefault();
     if (!agree) {
       alert("You must agree before registering.");
       return;
     }
     setShowConfirm(true);
+
+    setIsSubmiting(false)
+
   };
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     setShowConfirm(false);
-    onClose();
-    console.log({
-      role,
-      firstName,
-      surname,
-      email,
-      phone,
-      username,
-      password,
-    });
+
+
+    try {
+      if (password !== verifyPassword) {
+        alert("Passwords do not match");
+        return;
+      }
+
+      const res = await fetch("/api/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          role,
+          firstName,
+          surname,
+          email,
+          phone,
+          username,
+          password
+        })
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        toast.error(data.message || "Registration failed");
+        return;
+      }
+
+      toast.success("Registration successful!");
+      router.replace("/login")
+
+
+    } catch (error) {
+      toast.error("Error: " + error.message);
+    }
+
   };
 
-  if (!isOpen) return null;
+
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-emerald-800 overflow-y-auto">
       <div className="bg-white  rounded-xl shadow-xl w-full max-w-md sm:max-w-lg p-6 relative my-8 mx-4 h-auto max-h-[90vh] overflow-y-auto">
         {/* Close button */}
-        <button
-          onClick={onClose}
-          className="absolute top-3 right-3 text-gray-600 hover:text-red-500 text-xl"
-        >
-          ✕
-        </button>
+
 
         <h2 className="text-2xl font-bold text-emerald-900 text-center mb-6">
           Register Account
@@ -60,7 +95,7 @@ const RegisterForm = ({ isOpen, onClose }) => {
             <select
               value={role}
               onChange={(e) => setRole(e.target.value)}
-              className="border rounded px-3 py-2" 
+              className="border rounded px-3 py-2"
             >
               <option value="Supervisor">Supervisor</option>
               <option value="Cleaner">Cleaner</option>
@@ -161,16 +196,32 @@ const RegisterForm = ({ isOpen, onClose }) => {
               id="agree"
             />
             <label htmlFor="agree" className="text-sm">
-              I agree to the terms & conditions
+              Confirm
             </label>
           </div>
 
           <button
             type="submit"
             className="w-full bg-yellow-400 text-emerald-900 font-semibold py-2 rounded hover:opacity-90 transition"
+            disabled={isSubmiting}
           >
-            Register
+            {isSubmiting ? "Please wait ...." : "Register"}
           </button>
+          <div className="mt-4 space-y-2 text-center">
+            <Link
+              href="/login"
+              className="block w-full text-emerald-800 border border-emerald-800 py-2 rounded hover:bg-emerald-800 hover:text-white transition"
+            >
+              Already have an account? Login
+            </Link>
+
+            <Link
+              href="/"
+              className="block text-emerald-700 hover:underline transition"
+            >
+              Back to Home
+            </Link>
+          </div>
         </form>
       </div>
 
@@ -188,6 +239,7 @@ const RegisterForm = ({ isOpen, onClose }) => {
               <button
                 onClick={handleConfirm}
                 className="px-6 py-2 bg-yellow-400 text-emerald-900 rounded font-semibold"
+
               >
                 Yes, Register
               </button>
@@ -205,4 +257,4 @@ const RegisterForm = ({ isOpen, onClose }) => {
   );
 };
 
-export default RegisterForm;
+export default RegisterFormPage;

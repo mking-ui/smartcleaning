@@ -1,18 +1,19 @@
-'use client'
-import Navbar from '@/components/cleaner/Navbar'
-import SideBar from '@/components/cleaner/Sidebar'
-import React from 'react'
+"use client"
+import Navbar from "@/components/cleaner/Navbar";
+import Sidebar from "@/components/cleaner/Sidebar";
 
-const Layout = ({ children }) => {
+const CleanerLayout = ({ children }) => {
+
+
   return (
     <div>
-      <Navbar />
-      <div className='flex w-full'>
-        <SideBar />
+      <Navbar  />
+      <div className="flex w-full">
+        <Sidebar  />
         {children}
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default Layout
+export default CleanerLayout;

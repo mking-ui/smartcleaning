@@ -1,18 +1,19 @@
-'use client'
-import Navbar from '@/components/report/Navbar'
-import SideBar from '@/components/report/Sidebar'
-import React from 'react'
+"use client"
+import Navbar from "@/components/report/Navbar";
+import Sidebar from "@/components/report/Sidebar";
 
-const Layout = ({ children }) => {
+const ReportLayout = ({ children }) => {
+ 
+
   return (
     <div>
-      <Navbar />
-      <div className='flex w-full'>
-        <SideBar />
+      <Navbar  />
+      <div className="flex w-full">
+        <Sidebar  />
         {children}
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default Layout
+export default ReportLayout;

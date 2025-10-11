@@ -1,91 +1,99 @@
 "use client";
+import React, { useEffect, useState } from "react";
 import { assets } from "@/assets/assets";
-import React, { useState } from "react";
+import toast from "react-hot-toast";
 
 const ManageReports = () => {
-  const reportsData = [
-    {
-      id: 1,
-      title: "Dirty Hallway",
-      location: "Block A",
-      reporter: "John Doe",
-      status: "Pending",
-      assignedCleaner: "",
-      deadline: "",
-      image: assets.clean,
-    },
-    {
-      id: 2,
-      title: "Spilled Water",
-      location: "Cafeteria",
-      reporter: "Mary Jane",
-      status: "Pending",
-      assignedCleaner: "",
-      deadline: "",
-      image: assets.clean,
-    },
-    {
-      id: 3,
-      title: "Toilet Water",
-      location: "Cafeteria",
-      reporter: "Mary Jane",
-      status: "Pending",
-      assignedCleaner: "",
-      deadline: "",
-      image: assets.clean,
-    },
-  ];
-
-  const cleaners = ["Aliyu Musa", "Grace John", "Kefas Bala"];
-  const daysOptions = [1, 2, 3, 5, 7];
-
-  const [reports, setReports] = useState(reportsData);
+  const [reports, setReports] = useState([]);
+  const [cleaners, setCleaners] = useState([]);
   const [selectedReportId, setSelectedReportId] = useState("");
   const [selectedCleaner, setSelectedCleaner] = useState("");
   const [selectedDays, setSelectedDays] = useState("");
+  const [isSubmiting, setIsSubmiting] = useState(false);
 
-  const handleAssign = () => {
+  const daysOptions = [1, 2, 3, 5, 7];
+
+  useEffect(() => {
+    fetchApprovedReports();
+    fetchCleaners();
+  }, []);
+
+  const fetchApprovedReports = async () => {
+    try {
+      const res = await fetch("/api/approved", { credentials: "include" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message);
+      setReports(data.reports);
+    } catch (error) {
+      console.error("Failed to fetch approved reports:", error.message);
+    }
+  };
+
+  const fetchCleaners = async () => {
+    try {
+      const res = await fetch("/api/cleaner", { credentials: "include" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message);
+      setCleaners(data.cleaners);
+    } catch (error) {
+      console.error("Failed to fetch cleaners:", error.message);
+    }
+  };
+
+  const handleAssign = async () => {
+    setIsSubmiting(true);
     if (!selectedReportId || !selectedCleaner || !selectedDays) {
-      alert("Please select report, cleaner and days.");
+      toast.error("Please select report, cleaner and days.");
       return;
     }
 
-    const deadline = new Date();
-    deadline.setDate(deadline.getDate() + parseInt(selectedDays));
+    try {
+      const res = await fetch("/api/report/assign", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          reportId: selectedReportId,
+          cleanerId: selectedCleaner,
+          days: selectedDays
+        })
+      });
 
-    setReports((prev) =>
-      prev.map((r) =>
-        r.id === parseInt(selectedReportId)
-          ? {
-              ...r,
-              assignedCleaner: selectedCleaner,
-              status: "In-progress",
-              deadline: deadline.toISOString().split("T")[0],
-            }
-          : r
-      )
-    );
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message);
 
-    alert("Task successfully assigned!");
-    setSelectedReportId("");
-    setSelectedCleaner("");
-    setSelectedDays("");
+      toast.success("Task successfully assigned!");
+      setSelectedReportId("");
+      setSelectedCleaner("");
+      setSelectedDays("");
+      fetchApprovedReports(); // refresh list
+    } catch (error) {
+      console.error("Assignment failed:", error.message);
+      toast.error("Assignment failed: " + error.message);
+    }
+    finally{
+      setIsSubmiting (false);
+    }
   };
 
-  const selectedReport = reports.find(
-    (r) => r.id === parseInt(selectedReportId)
-  );
+  const selectedReport = reports.find((r) => r._id === selectedReportId);
+
+  const getDeadlinePreview = () => {
+    if (!selectedDays) return null;
+    const deadline = new Date();
+    deadline.setDate(deadline.getDate() + Number(selectedDays));
+    return deadline.toLocaleDateString();
+  };
 
   return (
     <div className="min-h-screen w-full bg-gray-50 p-4 sm:p-6">
       <h2 className="text-xl sm:text-2xl font-bold text-emerald-900 mb-6">
-        Manage Reports
+        Assign Approved Tasks
       </h2>
 
-      {/* Dropdown to select report */}
+      {/* Select Approved Report */}
       <div className="bg-white p-4 rounded-lg shadow-md mb-6">
         <label className="block font-semibold text-gray-700 mb-2">
-          Select Report
+          Select Approved Report
         </label>
         <select
           value={selectedReportId}
@@ -93,45 +101,44 @@ const ManageReports = () => {
           className="w-full border rounded px-3 py-2"
         >
           <option value="">-- Choose Report --</option>
-          {reports
-            .filter((r) => r.status === "Pending")
-            .map((report) => (
-              <option key={report.id} value={report.id}>
-                {report.title} ({report.location})
-              </option>
-            ))}
+          {reports.map((report) => (
+            <option key={report._id} value={report._id}>
+              {report.jobType} - {report.location}
+            </option>
+          ))}
         </select>
       </div>
 
-      {/* Auto-filled Report Details + Image */}
+      {/* Report Details */}
       {selectedReport && (
         <div className="bg-white p-4 rounded-lg shadow-md mb-6 flex flex-col md:flex-row gap-6">
-          {/* Left: Details */}
           <div className="flex-1">
             <h3 className="font-bold text-emerald-900 mb-2">Report Details</h3>
-            <p>
-              <strong>Title:</strong> {selectedReport.title}
-            </p>
-            <p>
-              <strong>Location:</strong> {selectedReport.location}
-            </p>
-            <p>
-              <strong>Reporter:</strong> {selectedReport.reporter}
-            </p>
+            <p><strong>Reporter:</strong> {selectedReport.reporterName}</p>
+            <p><strong>Email:</strong> {selectedReport.reporterEmail}</p>
+            <p><strong>Location:</strong> {selectedReport.location}</p>
+            <p><strong>Description:</strong> {selectedReport.description}</p>
+            <p><strong>Urgency:</strong> {selectedReport.urgency}</p>
+            <p><strong>Job Type:</strong> {selectedReport.jobType}</p>
+            <a
+              href={selectedReport.googleLocation}
+              target="_blank"
+              className="text-blue-600 underline block mt-2"
+            >
+              View on Google Maps
+            </a>
           </div>
-
-          {/* Right: Image */}
           <div className="w-full md:w-48 h-32 flex-shrink-0">
             <img
-              src={selectedReport.image}
-              alt={selectedReport.title}
+              src={selectedReport.images?.[0]?.url || assets.clean}
+              alt="Report"
               className="w-full h-full object-cover rounded-md border"
             />
           </div>
         </div>
       )}
 
-      {/* Cleaner + Days Selection */}
+      {/* Assign Task */}
       {selectedReport && (
         <div className="bg-white p-4 rounded-lg shadow-md space-y-4">
           <div>
@@ -144,9 +151,9 @@ const ManageReports = () => {
               className="w-full border rounded px-3 py-2"
             >
               <option value="">-- Choose Cleaner --</option>
-              {cleaners.map((cleaner, idx) => (
-                <option key={idx} value={cleaner}>
-                  {cleaner}
+              {cleaners.map((cleaner) => (
+                <option key={cleaner._id} value={cleaner._id}>
+                  {cleaner.name}
                 </option>
               ))}
             </select>
@@ -154,73 +161,36 @@ const ManageReports = () => {
 
           <div>
             <label className="block font-semibold text-gray-700 mb-2">
-              Select Days
+              Select Number of Days
             </label>
             <select
               value={selectedDays}
               onChange={(e) => setSelectedDays(e.target.value)}
               className="w-full border rounded px-3 py-2"
             >
-              <option value="">-- Select Days --</option>
-              {daysOptions.map((d, idx) => (
-                <option key={idx} value={d}>
+              <option value="">-- Select Day --</option>
+              {daysOptions.map((d) => (
+                <option key={d} value={d}>
                   {d} day{d > 1 ? "s" : ""}
                 </option>
               ))}
             </select>
+            {selectedDays && (
+              <p className="mt-2 text-sm text-gray-600">
+                Estimated deadline: <strong>{getDeadlinePreview()}</strong>
+              </p>
+            )}
           </div>
 
           <button
             onClick={handleAssign}
             className="w-full bg-yellow-400 text-emerald-900 font-semibold py-2 rounded hover:opacity-90 transition"
-          >
-            Assign Task
+            disabled ={isSubmiting}
+        >
+          {isSubmiting? "Please wait ...":" Assign Task"}
           </button>
         </div>
       )}
-
-      {/* Assigned Reports List */}
-      <div className="mt-8">
-        <h3 className="text-lg font-bold text-emerald-900 mb-4">
-          Assigned Tasks
-        </h3>
-        <div className="space-y-4">
-          {reports
-            .filter((r) => r.status !== "Pending")
-            .map((report) => (
-              <div
-                key={report.id}
-                className="p-4 border rounded-lg bg-white shadow-sm flex flex-col md:flex-row justify-between gap-4"
-              >
-                <div>
-                  <p className="font-semibold text-emerald-900">{report.title}</p>
-                  <p className="text-sm text-gray-600">
-                    Cleaner: {report.assignedCleaner}
-                  </p>
-                  <p className="text-sm text-gray-600">
-                    Deadline: {report.deadline}
-                  </p>
-                  <p
-                    className={`text-xs font-semibold mt-1 px-2 py-1 rounded w-fit ${
-                      report.status === "In-progress"
-                        ? "bg-blue-100 text-blue-700"
-                        : "bg-green-100 text-green-700"
-                    }`}
-                  >
-                    {report.status}
-                  </p>
-                </div>
-                <div className="w-full md:w-32 h-24 flex-shrink-0">
-                  <img
-                    src={report.image}
-                    alt={report.title}
-                    className="w-full h-full object-cover rounded-md border"
-                  />
-                </div>
-              </div>
-            ))}
-        </div>
-      </div>
     </div>
   );
 };

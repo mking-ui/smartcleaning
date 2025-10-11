@@ -9,33 +9,39 @@ const ProgressReports = () => {
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // ✅ Fetch reports with "In Progress" status
   const fetchReports = async () => {
-    // Dummy assigned reports
-    const dummyReports = [
-      {
-        id: 1,
-        title: "Office Cleaning",
-        assignedCleaner: "Ali Musa",
-        deadline: "2025-10-10",
-        status: "In-progress",
-        image: assets.upload_area,
-      },
-      {
-        id: 2,
-        title: "Home Cleaning",
-        assignedCleaner: "Fatima Bello",
-        deadline: "2025-10-12",
-        status: "Completed",
-        image: assets.upload_area,
-      },
-    ];
+    try {
+      const res = await fetch("/api/report/in-progress", {
+        method: "GET",
+        credentials: "include",
+      });
 
-    setReports(dummyReports);
-    setLoading(false);
+      const data = await res.json();
+
+      if (!res.ok) {
+        console.error("Failed to fetch reports:", data.message);
+        return;
+      }
+
+      setReports(data.reports || []);
+    } catch (error) {
+      console.error("Error fetching reports:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
+  // ✅ Initial load
   useEffect(() => {
     fetchReports();
+
+    // 🔁 Auto-refresh every 10 seconds to update supervisor's view
+    const interval = setInterval(() => {
+      fetchReports();
+    }, 10000);
+
+    return () => clearInterval(interval);
   }, []);
 
   return (
@@ -45,51 +51,56 @@ const ProgressReports = () => {
       ) : (
         <div className="md:p-10 p-4">
           <h2 className="text-lg font-bold text-emerald-900 mb-6">
-            Assigned Tasks
+            In-Progress Cleaning Tasks
           </h2>
 
           <div className="space-y-4">
-            {reports
-              .filter((r) => r.status !== "Pending") // Exclude pending
-              .map((report) => (
+            {reports.length > 0 ? (
+              reports.map((report) => (
                 <div
-                  key={report.id}
+                  key={report._id}
                   className="p-4 border rounded-lg bg-white shadow-sm flex flex-col md:flex-row justify-between gap-4"
                 >
-                  {/* Report Info */}
+                  {/* Task Details */}
                   <div>
                     <p className="font-semibold text-emerald-900">
-                      {report.title}
+                      {report.jobType || "Untitled Task"}
                     </p>
                     <p className="text-sm text-gray-600">
-                      Cleaner: {report.assignedCleaner}
+                      Cleaner:{" "}
+                      {report.assignedCleaner
+                        ? `${report.assignedCleaner.firstName} ${report.assignedCleaner.surname}`
+                        : "Unassigned"}
                     </p>
                     <p className="text-sm text-gray-600">
-                      Deadline: {report.deadline}
+                      Location: {report.location || "Not specified"}
                     </p>
-                    <p
-                      className={`text-xs font-semibold mt-1 px-2 py-1 rounded w-fit ${
-                        report.status === "In-progress"
-                          ? "bg-blue-100 text-blue-700"
-                          : "bg-green-100 text-green-700"
-                      }`}
-                    >
+                    <p className="text-sm text-gray-600">
+                      Deadline:{" "}
+                      {report.deadline
+                        ? new Date(report.deadline).toLocaleDateString("en-GB")
+                        : "No deadline"}
+                    </p>
+                    <p className="text-xs font-semibold mt-1 px-2 py-1 rounded w-fit bg-blue-100 text-blue-700">
                       {report.status}
                     </p>
                   </div>
 
-                  {/* Report Image */}
+                  {/* Task Image */}
                   <div className="w-full md:w-32 h-24 flex-shrink-0">
                     <Image
-                      src={report.image}
-                      alt={report.title}
+                      src={report.images?.[0]?.url || assets.upload_area}
+                      alt={report.jobType || "Task image"}
                       width={128}
                       height={96}
                       className="w-full h-full object-cover rounded-md border"
                     />
                   </div>
                 </div>
-              ))}
+              ))
+            ) : (
+              <p className="text-gray-500">No in-progress reports found.</p>
+            )}
           </div>
         </div>
       )}

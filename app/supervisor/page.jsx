@@ -1,5 +1,5 @@
 "use client";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   PieChart,
@@ -15,22 +15,86 @@ import {
 } from "recharts";
 
 const SupervisorDashboard = () => {
-  // ✅ Mock stats
-  const reportSummary = [
-    { name: "Pending", value: 8, color: "#facc15" },
-    { name: "In-progress", value: 5, color: "#3b82f6" },
-    { name: "Completed", value: 12, color: "#16a34a" },
-  ];
+  const [reportSummary, setReportSummary] = useState([]);
+  const [weeklyJobs, setWeeklyJobs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const weeklyJobs = [
-    { day: "Mon", jobs: 4 },
-    { day: "Tue", jobs: 2 },
-    { day: "Wed", jobs: 6 },
-    { day: "Thu", jobs: 3 },
-    { day: "Fri", jobs: 5 },
-    { day: "Sat", jobs: 7 },
-    { day: "Sun", jobs: 1 },
-  ];
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        setLoading(true);
+
+        // 🔹 Fetch from your APIs
+        const [pendingRes, inProgressRes, completedRes] = await Promise.all([
+          fetch("/api/report/pending"),
+          fetch("/api/report/in-progress"),
+          fetch("/api/report/completed"),
+        ]);
+
+        if (!pendingRes.ok || !inProgressRes.ok || !completedRes.ok) {
+          throw new Error("Failed to fetch one or more report categories");
+        }
+
+        const pendingData = await pendingRes.json();
+        const inProgressData = await inProgressRes.json();
+        const completedData = await completedRes.json();
+
+        // 🔹 Build summary
+        const summary = [
+          { name: "Pending", value: pendingData.reports.length, color: "#facc15" },
+          { name: "In Progress", value: inProgressData.reports.length, color: "#3b82f6" },
+          { name: "Completed", value: completedData.count || completedData.reports.length, color: "#16a34a" },
+        ];
+
+        setReportSummary(summary);
+
+        // 🔹 Build weekly jobs data
+        const allReports = [
+          ...pendingData.reports,
+          ...inProgressData.reports,
+          ...completedData.reports,
+        ];
+
+        const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+        const weeklyCount = days.map((day) => ({ day, jobs: 0 }));
+
+        allReports.forEach((report) => {
+          if (report.createdAt) {
+            const createdAt = new Date(report.createdAt);
+            const day = days[createdAt.getDay()];
+            const found = weeklyCount.find((d) => d.day === day);
+            if (found) found.jobs += 1;
+          }
+        });
+
+        setWeeklyJobs(weeklyCount);
+      } catch (err) {
+        console.error(err);
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <p className="text-gray-500">Loading dashboard...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <p className="text-red-500">Error: {error}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 sm:p-6 space-y-8 w-full">
@@ -38,7 +102,7 @@ const SupervisorDashboard = () => {
         Supervisor Dashboard
       </h2>
 
-      {/* Report Summary - 3 cards across full width */}
+      {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
         {reportSummary.map((item) => (
           <div
@@ -55,8 +119,9 @@ const SupervisorDashboard = () => {
         ))}
       </div>
 
-      {/* Charts - split 6/6 */}
+      {/* Charts Section */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+        {/* Pie Chart */}
         <div className="col-span-6 bg-white p-4 sm:p-6 rounded-xl shadow-sm border">
           <h3 className="text-base sm:text-lg font-semibold mb-4">
             Reports Status
@@ -81,6 +146,7 @@ const SupervisorDashboard = () => {
           </ResponsiveContainer>
         </div>
 
+        {/* Bar Chart */}
         <div className="col-span-6 bg-white p-4 sm:p-6 rounded-xl shadow-sm border">
           <h3 className="text-base sm:text-lg font-semibold mb-4">
             Jobs This Week
@@ -97,7 +163,7 @@ const SupervisorDashboard = () => {
         </div>
       </div>
 
-      {/* Link to Manage Reports */}
+      {/* Manage Reports Link */}
       <div className="flex justify-end">
         <Link
           href="/supervisor/reports"

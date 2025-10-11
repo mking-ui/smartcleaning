@@ -2,13 +2,13 @@
 import React, { useState } from "react";
 import { assets } from "@/assets/assets";
 import Link from "next/link";
-import { useAppContext } from "@/context/AppContext";
-import Image from "next/image";// ✅ make sure this path matches your folder structure
-import RegisterForm from "@/app/register/page";
-import LoginForm from "@/app/login/page";
+import Image from "next/image";// ✅ 
+import { useRouter } from "next/navigation";
+import LoginForm from "./LoginForm";
+import RegisterForm from "./RegisterForm";
 
 const Navbar = () => {
-  const { isSeller, router } = useAppContext();
+  const router = useRouter();
   const [showRegister, setShowRegister] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
 

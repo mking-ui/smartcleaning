@@ -1,18 +1,18 @@
-'use client'
-import Navbar from '@/components/supervisor/Navbar'
-import Sidebar from '@/components/supervisor/Sidebar'
-import React from 'react'
+"use client"
+import Navbar from "@/components/supervisor/Navbar";
+import Sidebar from "@/components/supervisor/Sidebar";
 
-const Layout = ({ children }) => {
+const SupervisorLayout = ({ children }) => {
+  
   return (
     <div>
       <Navbar />
-      <div className='flex w-full'>
+      <div className="flex w-full">
         <Sidebar />
         {children}
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default Layout
+export default SupervisorLayout;

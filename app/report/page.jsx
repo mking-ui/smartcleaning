@@ -1,56 +1,128 @@
-'use client'
-import React, { useState } from "react";
+'use client';
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { assets } from "@/assets/assets";
+import toast from "react-hot-toast";
 
 const ReportCleaningSpace = () => {
   const [files, setFiles] = useState([]);
-  const [reporterName, setReporterName] = useState("");
+  const [firstName, setReporterFname] = useState("");
+  const [surname, setReporterSname] = useState("");
+  const [reporterEmail, setReporterEmail] = useState("");
   const [location, setLocation] = useState("");
   const [googleLocation, setGoogleLocation] = useState("");
   const [description, setDescription] = useState("");
   const [urgency, setUrgency] = useState("Normal");
   const [jobType, setJobType] = useState("Spillage");
+  const [isSubmiting, setIsSubmiting] = useState(false);
 
-  const handleSubmit = (e) => {
+  // Autofill email from localStorage
+  useEffect(() => {
+    const email = localStorage.getItem("email");
+    const firstName = localStorage.getItem("firstName");
+    const surname = localStorage.getItem("surname");
+    if (email) setReporterEmail(email);
+    if (firstName) setReporterFname(firstName);
+    if (surname) setReporterSname(surname);
+  }, []);
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const reportData = {
-      reporterName,
-      location,
-      googleLocation,
-      description,
-      urgency,
-      jobType,
-      files,
-    };
-    console.log("Submitted Report:", reportData);
-    alert("Report submitted successfully!");
+    setIsSubmiting(true)
+
+    try {
+      const formData = new FormData();
+      formData.append("firstName", firstName);
+      formData.append("surname", surname);
+      formData.append("reporterEmail", reporterEmail);
+      formData.append("location", location);
+      formData.append("googleLocation", googleLocation);
+      formData.append("description", description);
+      formData.append("urgency", urgency);
+      formData.append("jobType", jobType);
+
+      files.forEach((file) => {
+        if (file) formData.append("images", file);
+      });
+
+      const res = await fetch("/api/report", {
+        method: "POST",
+        body: formData,
+        credentials: "include"
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        toast.error(data.message || "Submission failed");
+        return;
+      }
+
+      toast.success("Report submitted successfully!");
+      console.log("Submitted Report:", data.report);
+    } catch (error) {
+      toast.error("Error: " + error.message);
+    }
+    finally {
+      setIsSubmiting(false)
+    }
   };
 
   return (
-    <div className="flex-1 min-h-screen  justify-between  bg-slate-100 text-black">
+    <div className="flex-1 min-h-screen justify-between bg-slate-100 text-black">
       <form
         onSubmit={handleSubmit}
-        className="md:p-10 p-4 space-y-5 border max-w-3xl my-3 mx-auto w-full bg-white" 
+        className="md:p-10 p-4 space-y-5 border max-w-3xl my-3 mx-auto w-full bg-white"
+        encType="multipart/form-data"
       >
         <h2 className="text-2xl font-bold text-center text-emerald-900">
           Cleaning Space Report Form
         </h2>
 
-        {/* Reporter Name - Full */}
-        <div className="flex flex-col gap-1 w-full">
-          <label htmlFor="reporterName" className="text-base font-medium">
-            Reporter Name
-          </label>
-          <input
-            id="reporterName"
-            type="text"
-            placeholder="Enter your full name"
-            className="outline-none py-2 px-3 rounded border border-gray-400 w-full"
-            onChange={(e) => setReporterName(e.target.value)}
-            value={reporterName}
-            required
-          />
+        {/* Reporter Name & Email */}
+        <div className="flex flex-col sm:flex-row gap-4 w-full">
+          <div className="flex flex-col gap-1 w-full sm:w-1/2">
+            <label htmlFor="reporterFname" className="text-base font-medium">
+              Reporter FirstName
+            </label>
+            <input
+              id="firstName"
+              type="text"
+              placeholder="Your first name"
+              className="outline-none py-2 px-3 rounded border border-gray-400 w-full bg-gray-100"
+              value={firstName}
+              readOnly
+              required
+            />
+          </div>
+          <div className="flex flex-col gap-1 w-full sm:w-1/2">
+            <label htmlFor="reporterSname" className="text-base font-medium">
+              Reporter Surname
+            </label>
+            <input
+              id="surname"
+              type="text"
+              placeholder="Your surname"
+              className="outline-none py-2 px-3 rounded border border-gray-400 w-full bg-gray-100"
+              value={surname}
+              readOnly
+              required
+            />
+          </div>
+          <div className="flex flex-col gap-1 w-full sm:w-1/2">
+            <label htmlFor="reporterEmail" className="text-base font-medium">
+              Reporter Email
+            </label>
+            <input
+              id="reporterEmail"
+              type="email"
+              placeholder="Your email"
+              className="outline-none py-2 px-3 rounded border border-gray-400 w-full bg-gray-100"
+              value={reporterEmail}
+              readOnly
+              required
+            />
+          </div>
         </div>
 
         {/* Location & Google Location */}
@@ -84,22 +156,6 @@ const ReportCleaningSpace = () => {
           </div>
         </div>
 
-        {/* Description */}
-        <div className="flex flex-col gap-1 w-full">
-          <label htmlFor="description" className="text-base font-medium">
-            Description of Issue
-          </label>
-          <textarea
-            id="description"
-            rows={4}
-            className="outline-none py-2 px-3 rounded border border-gray-400 resize-none w-full"
-            placeholder="Briefly describe the cleaning issue"
-            onChange={(e) => setDescription(e.target.value)}
-            value={description}
-            required
-          ></textarea>
-        </div>
-
         {/* Urgency & Job Type */}
         <div className="flex flex-col sm:flex-row gap-4 w-full">
           <div className="flex flex-col gap-1 w-full sm:w-1/2">
@@ -118,7 +174,6 @@ const ReportCleaningSpace = () => {
               <option value="Critical">Critical</option>
             </select>
           </div>
-
           <div className="flex flex-col gap-1 w-full sm:w-1/2">
             <label htmlFor="jobType" className="text-base font-medium">
               Type of Cleaning Job
@@ -140,16 +195,28 @@ const ReportCleaningSpace = () => {
           </div>
         </div>
 
+        {/* Description */}
+        <div className="flex flex-col gap-1 w-full">
+          <label htmlFor="description" className="text-base font-medium">
+            Description of Issue
+          </label>
+          <textarea
+            id="description"
+            rows={4}
+            className="outline-none py-2 px-3 rounded border border-gray-400 resize-none w-full"
+            placeholder="Briefly describe the cleaning issue"
+            onChange={(e) => setDescription(e.target.value)}
+            value={description}
+            required
+          ></textarea>
+        </div>
+
         {/* Upload / Camera Capture */}
         <div>
           <p className="text-base font-medium">Capture / Upload Photo</p>
           <div className="flex flex-col sm:flex-row gap-4 mt-2">
             {[...Array(2)].map((_, index) => (
-              <label
-                key={index}
-                htmlFor={`image${index}`}
-                className="cursor-pointer flex-1"
-              >
+              <label key={index} htmlFor={`image${index}`} className="cursor-pointer flex-1">
                 <input
                   type="file"
                   id={`image${index}`}
@@ -174,12 +241,7 @@ const ReportCleaningSpace = () => {
                       className="object-cover w-full h-full"
                     />
                   ) : (
-                    <Image
-                      src={assets.upload_area}
-                      alt="Upload"
-                      width={50}
-                      height={50}
-                    />
+                    <Image src={assets.bg} alt="Upload" width={50} height={50} />
                   )}
                 </div>
               </label>
@@ -191,8 +253,9 @@ const ReportCleaningSpace = () => {
         <button
           type="submit"
           className="w-full px-8 py-2.5 text-emerald-900 bg-yellow-400 hover:text-yellow-400 font-medium rounded hover:bg-emerald-800"
+          disabled={isSubmiting}
         >
-          Submit Report
+          {isSubmiting ? "Please wait ...." : " Submit Report"}
         </button>
       </form>
     </div>

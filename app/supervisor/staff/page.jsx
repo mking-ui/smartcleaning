@@ -3,93 +3,146 @@ import React, { useEffect, useState } from "react";
 import Footer from "@/components/supervisor/Footer";
 import Loading from "@/components/Loading";
 
-const StaffReporterList = () => {
+export default function StaffReporterList() {
   const [staff, setStaff] = useState([]);
   const [reporters, setReporters] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Dummy staff (cleaners)
-    const dummyStaff = [
-      { id: 1, name: "Ali Musa", email: "ali@example.com", phone: "08012345678", role: "Cleaner" },
-      { id: 2, name: "Fatima Bello", email: "fatima@example.com", phone: "08087654321", role: "Cleaner" },
-      { id: 3, name: "Sani Ibrahim", email: "sani@example.com", phone: "08099887766", role: "Cleaner" },
-    ];
-
-    // Dummy reporters
-    const dummyReporters = [
-      { id: 1, name: "John Doe", email: "john@example.com", phone: "08123456789" },
-      { id: 2, name: "Mary Jane", email: "mary@example.com", phone: "08111222333" },
-      { id: 3, name: "Grace John", email: "grace@example.com", phone: "08144556677" },
-    ];
-
-    setStaff(dummyStaff);
-    setReporters(dummyReporters);
-    setLoading(false);
+    void fetchAndSave();
   }, []);
 
-  return (
-    <div className="flex-1 h-screen overflow-scroll flex flex-col justify-between text-sm">
-      {loading ? (
-        <Loading />
-      ) : (
-        <div className="md:p-10 p-4 space-y-10">
-          {/* Staff Table */}
-          <div>
-            <h2 className="text-lg font-medium mb-3">Cleaner List</h2>
-            <div className="overflow-x-auto">
-              <table className="w-full border text-left text-sm">
-                <thead className="bg-gray-200 text-gray-700">
-                  <tr>
-                    <th className="p-2 border">Name</th>
-                    <th className="p-2 border">Email</th>
-                    <th className="p-2 border">Phone</th>
-                    <th className="p-2 border">Role</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {staff.map((s) => (
-                    <tr key={s.id} className="border-b hover:bg-gray-50">
-                      <td className="p-2 border">{s.name}</td>
-                      <td className="p-2 border">{s.email}</td>
-                      <td className="p-2 border">{s.phone}</td>
-                      <td className="p-2 border">{s.role}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+  async function fetchAndSave() {
+    setLoading(true);
+    try {
+      const [cleanerRes, reportersRes] = await Promise.all([
+        fetch("/api/cleaner"),
+        fetch("/api/reporter")
+      ]);
 
-          {/* Reporter Table */}
-          <div>
-            <h2 className="text-lg font-medium mb-3">Reporter List</h2>
-            <div className="overflow-x-auto">
-              <table className="w-full border text-left text-sm">
-                <thead className="bg-gray-200 text-gray-700">
+      if (!cleanerRes.ok) {
+        const text = await cleanerRes.text().catch(() => null);
+        throw new Error(text || `Cleaner API error ${cleanerRes.status}`);
+      }
+
+      if (!reportersRes.ok) {
+        const text = await reportersRes.text().catch(() => null);
+        throw new Error(text || `Reporters API error ${reportersRes.status}`);
+      }
+
+      const cleanerData = await cleanerRes.json();
+      const reportersData = await reportersRes.json();
+
+      const cleaners = Array.isArray(cleanerData.cleaners) ? cleanerData.cleaners : [];
+      const reps = Array.isArray(reportersData.reporters) ? reportersData.reporters : [];
+
+      // Normalize and set state
+      setStaff(
+        cleaners.map(c => ({
+          _id: c._id,
+          name: c.name || `${c.firstName || ""} ${c.surname || ""}`.trim(),
+          email: c.email || "",
+          phone: c.phone || "",
+          role: c.role || "Cleaner"
+        }))
+      );
+
+      setReporters(
+        reps.map(r => ({
+          _id: r._id || r.email,
+          name: r.name || r.email || "",
+          email: r.email || "",
+          phone: r.phone || "",
+          role: r.role || "Reporter"
+        }))
+      );
+
+      // Save locally
+      try {
+        localStorage.setItem("cleaners", JSON.stringify(cleaners));
+        localStorage.setItem("reporters", JSON.stringify(reps));
+      } catch (e) {
+        console.warn("Could not save to localStorage:", e?.message || e);
+      }
+    } catch (err) {
+    setStaff([]);
+  setReporters([]);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (loading) return <Loading />;
+
+  return (
+    <div className="flex-1 h-screen overflow-auto flex flex-col justify-between text-sm">
+      <div className="md:p-10 p-4 space-y-10">
+        <section>
+          <h2 className="text-lg font-medium mb-3">Cleaner List</h2>
+          <div className="overflow-x-auto">
+            <table className="w-full border text-left text-sm">
+              <thead className="bg-gray-200 text-gray-700">
+                <tr>
+                  <th className="p-2 border">Name</th>
+                  <th className="p-2 border">Email</th>
+                  <th className="p-2 border">Phone</th>
+                  <th className="p-2 border">Role</th>
+                </tr>
+              </thead>
+              <tbody>
+                {staff.length === 0 ? (
                   <tr>
-                    <th className="p-2 border">Name</th>
-                    <th className="p-2 border">Email</th>
-                    <th className="p-2 border">Phone</th>
+                    <td colSpan={4} className="p-4 text-center text-gray-500">No cleaners found</td>
                   </tr>
-                </thead>
-                <tbody>
-                  {reporters.map((r) => (
-                    <tr key={r.id} className="border-b hover:bg-gray-50">
-                      <td className="p-2 border">{r.name}</td>
-                      <td className="p-2 border">{r.email}</td>
-                      <td className="p-2 border">{r.phone}</td>
+                ) : (
+                  staff.map((s) => (
+                    <tr key={s._id || s.email} className="border-b hover:bg-gray-50">
+                      <td className="p-2 border">{s.name || "—"}</td>
+                      <td className="p-2 border">{s.email || "—"}</td>
+                      <td className="p-2 border">{s.phone || "—"}</td>
+                      <td className="p-2 border">{s.role || "Cleaner"}</td>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
-        </div>
-      )}
+        </section>
+
+        <section>
+          <h2 className="text-lg font-medium mb-3">Reporter List</h2>
+          <div className="overflow-x-auto">
+            <table className="w-full border text-left text-sm">
+              <thead className="bg-gray-200 text-gray-700">
+                <tr>
+                  <th className="p-2 border">Name</th>
+                  <th className="p-2 border">Email</th>
+                  <th className="p-2 border">Phone</th>
+                  <th className="p-2 border">Role</th>
+                </tr>
+              </thead>
+              <tbody>
+                {reporters.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="p-4 text-center text-gray-500">No reporters found</td>
+                  </tr>
+                ) : (
+                  reporters.map((r) => (
+                    <tr key={r._id || r.email} className="border-b hover:bg-gray-50">
+                      <td className="p-2 border">{r.name || "—"}</td>
+                      <td className="p-2 border">{r.email || "—"}</td>
+                      <td className="p-2 border">{r.phone || "—"}</td>
+                      <td className="p-2 border">{r.role || "Reporter"}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+
       <Footer />
     </div>
   );
-};
-
-export default StaffReporterList;
+}
