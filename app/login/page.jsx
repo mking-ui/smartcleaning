@@ -1,16 +1,31 @@
 "use client";
-import { signIn } from "next-auth/react";
+import { signIn, useSession, getSession } from "next-auth/react";
+
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import Link from "next/link";
 
 const LoginFormPage = () => {
+  const { data: session, status } = useSession();
   const [role, setRole] = useState("Reporter");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const router = useRouter();
   const [isSubmiting, setIsSubmiting]= useState(false);
+
+
+
+   // ✅ Automatically redirect when the session becomes available
+  useEffect(() => {
+   
+    if (status === "authenticated" && session?.user?.role) {
+      const userRole = session.user.role;
+      if (userRole === "Supervisor") router.push("/supervisor");
+      else if (userRole === "Cleaner") router.push("/cleaner");
+      else router.push("/report");
+    }
+  }, [status, session, router]);
 
   const handleSubmit = async (e) => {
     setIsSubmiting(true);
@@ -23,14 +38,13 @@ const LoginFormPage = () => {
       password,
       role,
     });
+        await getSession();
 
     if (res.error) {
       toast.error(res.error);
     } else {
       toast.success("Login successful!");
-      if (role === "Supervisor") router.push("/supervisor");
-      else if (role === "Cleaner") router.push("/cleaner");
-      else router.push("/report");
+   
     }
    
       
