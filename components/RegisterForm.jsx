@@ -14,36 +14,37 @@ const RegisterForm = ({ isOpen, onClose }) => {
   const [verifyPassword, setVerifyPassword] = useState("");
   const [agree, setAgree] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
-  const [isSubmiting, setIsSubmiting]= useState(false);
+  const [isSubmiting, setIsSubmiting] = useState(false);
   const router = useRouter();
 
+  if (!isOpen) return null;
+
   const handleSubmit = (e) => {
-    setIsSubmiting(true)
     e.preventDefault();
+
     if (!agree) {
-      alert("You must agree before registering.");
+      toast.error("You must agree before registering.");
       return;
     }
+
+    if (password !== verifyPassword) {
+      toast.error("Passwords do not match");
+      return;
+    }
+
+    // open confirmation modal
     setShowConfirm(true);
- 
-   setIsSubmiting (false)
- 
   };
 
   const handleConfirm = async () => {
     setShowConfirm(false);
-   
+    setIsSubmiting(true);
 
     try {
-      if (password !== verifyPassword) {
-        alert("Passwords do not match");
-        return;
-      }
-
       const res = await fetch("/api/register", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           role,
@@ -52,8 +53,8 @@ const RegisterForm = ({ isOpen, onClose }) => {
           email,
           phone,
           username,
-          password
-        })
+          password,
+        }),
       });
 
       const data = await res.json();
@@ -63,26 +64,40 @@ const RegisterForm = ({ isOpen, onClose }) => {
         return;
       }
 
-      toast.success("Registration successful!");
-      onClose();
-      router.replace("/login")
-     
+      if (data.success) {
+        toast.success("Registration successful!");
 
+        // reset all fields
+        setFirstName("");
+        setSurname("");
+        setEmail("");
+        setPhone("");
+        setUsername("");
+        setPassword("");
+        setVerifyPassword("");
+        setAgree(false);
+        setRole("Reporter");
+
+        // close modal and redirect to login after short delay
+        setTimeout(() => {
+          onClose();
+          router.push("/login");
+        }, 1000);
+      }
     } catch (error) {
       toast.error("Error: " + error.message);
+    } finally {
+      setIsSubmiting(false);
     }
-   
   };
-
-
-  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 overflow-y-auto">
-      <div className="bg-white  rounded-xl shadow-xl w-full max-w-md sm:max-w-lg p-6 relative my-8 mx-4 h-auto max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-md sm:max-w-lg p-6 relative my-8 mx-4 h-auto max-h-[90vh] overflow-y-auto">
         {/* Close button */}
         <button
           onClick={onClose}
+          disabled={isSubmiting}
           className="absolute top-3 right-3 text-gray-600 hover:text-red-500 text-xl"
         >
           ✕
@@ -198,6 +213,7 @@ const RegisterForm = ({ isOpen, onClose }) => {
               checked={agree}
               onChange={(e) => setAgree(e.target.checked)}
               id="agree"
+              disabled={isSubmiting}
             />
             <label htmlFor="agree" className="text-sm">
               Confirm
@@ -207,9 +223,9 @@ const RegisterForm = ({ isOpen, onClose }) => {
           <button
             type="submit"
             className="w-full bg-yellow-400 text-emerald-900 font-semibold py-2 rounded hover:opacity-90 transition"
-        disabled={isSubmiting}
-            >
-          {isSubmiting ? "Please wait ....":"Register"}
+            disabled={isSubmiting}
+          >
+            {isSubmiting ? "Please wait..." : "Register"}
           </button>
         </form>
       </div>
@@ -227,13 +243,14 @@ const RegisterForm = ({ isOpen, onClose }) => {
             <div className="flex justify-center gap-4">
               <button
                 onClick={handleConfirm}
+                disabled={isSubmiting}
                 className="px-6 py-2 bg-yellow-400 text-emerald-900 rounded font-semibold"
-              
               >
-               Yes, Register
+                {isSubmiting ? "Processing..." : "Yes, Register"}
               </button>
               <button
                 onClick={() => setShowConfirm(false)}
+                disabled={isSubmiting}
                 className="px-6 py-2 border border-gray-400 rounded"
               >
                 Cancel

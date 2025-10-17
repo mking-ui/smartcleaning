@@ -20,64 +20,75 @@ const SupervisorDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    const fetchDashboardData = async () => {
-      try {
-        setLoading(true);
+  // ✅ Fetch reports by status from APIs
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
 
-        // 🔹 Fetch from your APIs
-        const [pendingRes, inProgressRes, completedRes] = await Promise.all([
-          fetch("/api/report/pending"),
-          fetch("/api/report/in-progress"),
-          fetch("/api/report/completed"),
-        ]);
+      const [pendingRes, inProgressRes, completedRes] = await Promise.all([
+        fetch("/api/report/pending"),
+        fetch("/api/report/in-progress"),
+        fetch("/api/report/completed"),
+      ]);
 
-        if (!pendingRes.ok || !inProgressRes.ok || !completedRes.ok) {
-          throw new Error("Failed to fetch one or more report categories");
-        }
+      const pendingData = await pendingRes.json();
+      const inProgressData = await inProgressRes.json();
+      const completedData = await completedRes.json();
 
-        const pendingData = await pendingRes.json();
-        const inProgressData = await inProgressRes.json();
-        const completedData = await completedRes.json();
-
-        // 🔹 Build summary
-        const summary = [
-          { name: "Pending", value: pendingData.reports.length, color: "#facc15" },
-          { name: "In Progress", value: inProgressData.reports.length, color: "#3b82f6" },
-          { name: "Completed", value: completedData.count || completedData.reports.length, color: "#16a34a" },
-        ];
-
-        setReportSummary(summary);
-
-        // 🔹 Build weekly jobs data
-        const allReports = [
-          ...pendingData.reports,
-          ...inProgressData.reports,
-          ...completedData.reports,
-        ];
-
-        const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-        const weeklyCount = days.map((day) => ({ day, jobs: 0 }));
-
-        allReports.forEach((report) => {
-          if (report.createdAt) {
-            const createdAt = new Date(report.createdAt);
-            const day = days[createdAt.getDay()];
-            const found = weeklyCount.find((d) => d.day === day);
-            if (found) found.jobs += 1;
-          }
-        });
-
-        setWeeklyJobs(weeklyCount);
-      } catch (err) {
-        console.error(err);
-        setError(err.message);
-      } finally {
-        setLoading(false);
+      if (!pendingRes.ok || !inProgressRes.ok || !completedRes.ok) {
+        throw new Error("Failed to fetch dashboard data");
       }
-    };
 
+      const summary = [
+        {
+          name: "Pending",
+          value: pendingData.reports?.length || 0,
+          color: "#facc15",
+        },
+        {
+          name: "In Progress",
+          value: inProgressData.reports?.length || 0,
+          color: "#3b82f6",
+        },
+        {
+          name: "Completed",
+          value: completedData.reports?.length || 0,
+          color: "#16a34a",
+        },
+      ];
+
+      // ✅ Generate weekly job summary (based on creation date)
+      const allReports = [
+        ...(pendingData.reports || []),
+        ...(inProgressData.reports || []),
+        ...(completedData.reports || []),
+      ];
+
+      const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+      const weeklyCount = days.map((day) => ({
+        day,
+        jobs: allReports.filter((r) => {
+          const created = new Date(r.createdAt);
+          return created.getDay() === days.indexOf(day);
+        }).length,
+      }));
+
+      setReportSummary(summary);
+      setWeeklyJobs(weeklyCount);
+    } catch (err) {
+      console.error(err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchDashboardData();
+
+    // 🔁 Auto-refresh every 10 seconds
+    const interval = setInterval(fetchDashboardData, 100000);
+    return () => clearInterval(interval);
   }, []);
 
   if (loading) {
@@ -102,7 +113,7 @@ const SupervisorDashboard = () => {
         Supervisor Dashboard
       </h2>
 
-      {/* Summary Cards */}
+      {/* ✅ Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
         {reportSummary.map((item) => (
           <div
@@ -119,7 +130,7 @@ const SupervisorDashboard = () => {
         ))}
       </div>
 
-      {/* Charts Section */}
+      {/* ✅ Charts Section */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
         {/* Pie Chart */}
         <div className="col-span-6 bg-white p-4 sm:p-6 rounded-xl shadow-sm border">
@@ -163,7 +174,7 @@ const SupervisorDashboard = () => {
         </div>
       </div>
 
-      {/* Manage Reports Link */}
+      {/* ✅ Manage Reports Link */}
       <div className="flex justify-end">
         <Link
           href="/supervisor/reports"

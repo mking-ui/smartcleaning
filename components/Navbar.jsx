@@ -43,14 +43,14 @@ const Navbar = () => {
             onClick={() => setShowRegister(true)}
             className="flex items-center gap-2  font-normal hover:bg-slate-100  text-emerald-900/80 bg-yellow-500 rounded-full px-2 p-1  transition"
           >
-            <Image src={assets.user_icon} alt="user icon"  />
+            <Image src={assets.add} alt="user icon"  />
             Register
           </button>
           <button
             onClick={() => setShowLogin(true)}
             className="flex items-center gap-2 hover:text-yellow-400 transition px-2 p-1 text-slate-100"
           >
-            <Image src={assets.user_icon} alt="user icon"   />
+            <Image src={assets.key} alt="user icon" className=" hover:text-yellow-400 "   />
             Login
           </button>
         </ul>

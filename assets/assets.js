@@ -5,6 +5,8 @@ import task2 from "./task2.png";
 import task3 from "./task3.png";
 import task4 from "./task4.png";
 import task5 from "./task5.png";
+import add from "./add.svg";
+import key from "./key.svg";
 import bg from "./bg.jpg";
 import bg1 from "./bg1.jpg";
 import bg2 from "./bg2.jpg";
@@ -24,6 +26,8 @@ export const assets = {
   logo,
   clean,
   task1,
+  add,
+  key,
   task2,
   task3,
   task4,

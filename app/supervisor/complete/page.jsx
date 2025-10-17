@@ -1,15 +1,19 @@
 "use client";
+
 import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import { assets } from "@/assets/assets";
 import Loading from "@/components/Loading";
 import Footer from "@/components/supervisor/Footer";
 
-const CompletedReports = () => {
+const SupervisorCompleted = () => {
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedImage, setSelectedImage] = useState(null);
 
-  // ✅ Fetch reports with "Resolved" or "Completed" status
+  const fallbackImage = "/placeholder.png";
+
+  // ✅ Fetch all completed reports (Resolved or Completed)
   const fetchReports = async () => {
     try {
       const res = await fetch("/api/report/completed", {
@@ -18,26 +22,42 @@ const CompletedReports = () => {
       });
 
       const data = await res.json();
-
-      if (!res.ok) {
-        console.error("Failed to fetch completed reports:", data.message);
-        return;
-      }
+      if (!res.ok) throw new Error(data.message || "Failed to fetch reports");
 
       setReports(data.reports || []);
     } catch (error) {
-      console.error("Error fetching completed reports:", error);
+      console.error("Error fetching completed reports:", error.message);
     } finally {
       setLoading(false);
     }
   };
 
-  // ✅ Initial load and auto-refresh every 10 seconds
   useEffect(() => {
     fetchReports();
-    const interval = setInterval(fetchReports, 10000);
+    const interval = setInterval(fetchReports, 10000); // auto-refresh
     return () => clearInterval(interval);
   }, []);
+
+  // ✅ Date Formatter
+  const formatDateTime = (dateString) => {
+    if (!dateString) return "Unknown";
+    const date = new Date(dateString);
+    return date.toLocaleString("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: true,
+    });
+  };
+
+  const safeImage = (url) => {
+    if (url && typeof url === "string" && url.trim() !== "") return url;
+    if (typeof assets.upload_area === "string") return assets.upload_area;
+    return fallbackImage;
+  };
 
   return (
     <div className="flex-1 h-screen overflow-scroll flex flex-col justify-between text-sm">
@@ -46,56 +66,88 @@ const CompletedReports = () => {
       ) : (
         <div className="md:p-10 p-4">
           <h2 className="text-lg font-bold text-emerald-900 mb-6">
-            Completed Tasks
+            Completed Cleaning Tasks
           </h2>
 
           <div className="space-y-4">
             {reports.length > 0 ? (
-              reports.map((report) => (
-                <div
-                  key={report._id}
-                  className="p-4 border rounded-lg bg-white shadow-sm flex flex-col md:flex-row justify-between gap-4"
-                >
-                  {/* Report Info */}
-                  <div>
-                    <p className="font-semibold text-emerald-900">
-                      {report.jobType || "Untitled Task"}
-                    </p>
-                    <p className="text-sm text-gray-600">
-                      Cleaner:{" "}
-                      {report.assignedCleaner
-                        ? `${report.assignedCleaner.firstName} ${report.assignedCleaner.surname}`
-                        : "Unassigned"}
-                    </p>
-                    <p className="text-sm text-gray-600">
-                      Location: {report.location || "Not specified"}
-                    </p>
-                    <p className="text-sm text-gray-600">
-                      Completed On:{" "}
-                      {report.updatedAt
-                        ? new Date(report.updatedAt).toLocaleDateString("en-GB")
-                        : "—"}
-                    </p>
-                    <p className="text-xs font-semibold mt-1 px-2 py-1 rounded w-fit bg-green-100 text-green-700">
-                      {report.status}
-                    </p>
-                  </div>
+              reports.map((report) => {
+                const taskImage = safeImage(report.images?.[0]?.url);
+                const proofImage = safeImage(
+                  report.images?.[report.images.length - 1]?.url
+                );
 
-                  {/* Proof Image */}
-                  <div className="w-full md:w-32 h-24 flex-shrink-0">
-                    <Image
-                      src={
-                        report.images?.[report.images.length - 1]?.url ||
-                        assets.upload_area
-                      }
-                      alt={report.jobType || "Completed task image"}
-                      width={128}
-                      height={96}
-                      className="w-full h-full object-cover rounded-md border"
-                    />
+                return (
+                  <div
+                    key={report._id}
+                    className="p-4 border rounded-lg bg-white shadow-sm flex flex-col md:flex-row justify-between gap-4"
+                  >
+                    {/* 🧾 Task Info */}
+                    <div className="flex-1">
+                      <p className="font-semibold text-emerald-900">
+                        {report.jobType || "Unnamed Task"}
+                      </p>
+                      <p className="text-sm text-gray-600">
+                        Cleaner:{" "}
+                        {report.assignedCleaner
+                          ? `${report.assignedCleaner.firstName} ${report.assignedCleaner.surname}`
+                          : "Unassigned"}
+                      </p>
+                      <p className="text-sm text-gray-600">
+                        Location: {report.location || "Not specified"}
+                      </p>
+                      <p className="text-sm text-gray-600">
+                        Assigned On:{" "}
+                        {report.createdAt
+                          ? formatDateTime(report.createdAt)
+                          : "Unknown"}
+                      </p>
+                      <p className="text-sm text-gray-600">
+                        Completed On:{" "}
+                        {report.updatedAt
+                          ? formatDateTime(report.updatedAt)
+                          : "Unknown"}
+                      </p>
+                      <p className="text-xs font-semibold mt-1 px-2 py-1 rounded w-fit bg-green-100 text-green-700">
+                        {report.status}
+                      </p>
+                    </div>
+
+                    {/* 🖼️ Images Side-by-Side */}
+                    <div className="flex flex-col md:flex-row items-center gap-3 md:w-80">
+                      {/* Task Image */}
+                      <div className="flex flex-col items-center">
+                        <p className="text-xs text-gray-500 font-semibold mb-1">
+                          Task Image
+                        </p>
+                        <Image
+                          src={taskImage}
+                          alt="Task image"
+                          width={150}
+                          height={100}
+                          className="w-32 h-28 object-cover rounded-md border cursor-pointer hover:opacity-80"
+                          onClick={() => setSelectedImage(taskImage)}
+                        />
+                      </div>
+
+                      {/* Proof Image */}
+                      <div className="flex flex-col items-center">
+                        <p className="text-xs text-gray-500 font-semibold mb-1">
+                          Proof Image
+                        </p>
+                        <Image
+                          src={proofImage}
+                          alt="Proof of completion"
+                          width={150}
+                          height={100}
+                          className="w-32 h-28 object-cover rounded-md border cursor-pointer hover:opacity-80"
+                          onClick={() => setSelectedImage(proofImage)}
+                        />
+                      </div>
+                    </div>
                   </div>
-                </div>
-              ))
+                );
+              })
             ) : (
               <p className="text-gray-500">No completed tasks found.</p>
             )}
@@ -104,8 +156,24 @@ const CompletedReports = () => {
       )}
 
       <Footer />
+
+      {/* 🖼️ Full-Size Image Modal */}
+      {selectedImage && (
+        <div
+          onClick={() => setSelectedImage(null)}
+          className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 cursor-pointer"
+        >
+          <Image
+            src={selectedImage}
+            alt="Full-size preview"
+            width={700}
+            height={500}
+            className="max-w-[90%] max-h-[85%] object-contain rounded-lg shadow-lg"
+          />
+        </div>
+      )}
     </div>
   );
 };
 
-export default CompletedReports;
+export default SupervisorCompleted;

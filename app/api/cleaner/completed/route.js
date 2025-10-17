@@ -1,26 +1,39 @@
 import { NextResponse } from "next/server";
 import connectDB from "@/config/db";
 import Report from "@/models/Report";
+import User from "@/models/User";
 
 export async function GET(req) {
   try {
     await connectDB();
 
     const { searchParams } = new URL(req.url);
-    const cleanerId = searchParams.get("cleanerId");
+    const email = searchParams.get("email");
 
-    if (!cleanerId) {
+    if (!email) {
       return NextResponse.json(
-        { success: false, message: "Cleaner ID is required" },
+        { success: false, message: "Cleaner email is required" },
         { status: 400 }
       );
     }
 
-    // ✅ Fetch completed reports for this cleaner
+    // ✅ Find the cleaner by email
+    const cleaner = await User.findOne({ email });
+
+    if (!cleaner) {
+      return NextResponse.json(
+        { success: false, message: "Cleaner not found" },
+        { status: 404 }
+      );
+    }
+
+    // ✅ Fetch all completed (Resolved) reports assigned to this cleaner
     const reports = await Report.find({
-      "assignedCleaner._id": cleanerId,
+      assignedCleaner: cleaner._id,
       status: "Resolved",
-    }).sort({ updatedAt: -1 });
+    })
+      .populate("assignedCleaner", "firstName surname email")
+      .sort({ updatedAt: -1 });
 
     return NextResponse.json({ success: true, reports });
   } catch (error) {

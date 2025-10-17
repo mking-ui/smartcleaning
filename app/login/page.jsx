@@ -1,72 +1,48 @@
 "use client";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import React, { useState } from "react";
+import { signIn } from "next-auth/react";
 import toast from "react-hot-toast";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import Link from "next/link";
 
 const LoginFormPage = () => {
-
   const [role, setRole] = useState("Reporter");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [isSubmiting, setIsSubmiting] = useState(false);
   const router = useRouter();
-
+  const [isSubmiting, setIsSubmiting]= useState(false);
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
     setIsSubmiting(true);
+    e.preventDefault();
 
     try {
-      const res = await fetch("/api/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        credentials: "include", // ✅ this sends cookies
-        body: JSON.stringify({ role, username, password })
-      });
+        const res = await signIn("credentials", {
+      redirect: false,
+      username,
+      password,
+      role,
+    });
 
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        toast.error(data.message || "Login failed");
-        return;
-      }
-
+    if (res.error) {
+      toast.error(res.error);
+    } else {
       toast.success("Login successful!");
-
-
-      // Optionally store token
-      localStorage.setItem("userId", data.user._id);
-      localStorage.setItem("role", data.user.role);
-      localStorage.setItem("username", data.user.username);
-      localStorage.setItem("email", data.user.email);
-      localStorage.setItem("firstName", data.user.firstName);
-      localStorage.setItem("surname", data.user.surname);
-
-
-
-      // ✅ Delay navigation to let cookie set
-      setTimeout(() => {
-        if (data.user.role === "Supervisor") {
-          router.push("/supervisor");
-        } else if (data.user.role === "Cleaner") {
-          router.push("/cleaner");
-        } else {
-          router.push("/report");
-        }
-      }, 1000);
-      console.log("Redirecting to:", data.user.role);
-
-
+      if (role === "Supervisor") router.push("/supervisor");
+      else if (role === "Cleaner") router.push("/cleaner");
+      else router.push("/report");
+    }
+   
+      
     } catch (error) {
-      toast.error("Error: " + error.message);
+       toast.error("Error: " + error.message);
+      
     }
     finally {
       setIsSubmiting(false)
     }
+  
+   
   };
 
   return (

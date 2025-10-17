@@ -1,44 +1,25 @@
-
 import { NextResponse } from "next/server";
-import jwt from "jsonwebtoken";
+import { getServerSession } from "next-auth";
+import { authOptions } from "../auth/[...nextauth]/route"; // 👈 import config
 import connectDB from "@/config/db";
-import User from "@/models/User";
 import Report from "@/models/Report";
 import cloudinary from "@/config/cloudinary";
-
-
 
 export async function POST(request) {
   try {
     await connectDB();
 
-    // ✅ Extract token from cookie
-    const token = request.cookies.get("token")?.value;
-    if (!token) {
-      return NextResponse.json({ success: false, message: "Unauthorized: No token" }, { status: 401 });
+    // ✅ Get session from NextAuth
+    const session = await getServerSession(authOptions);
+
+    if (!session || !session.user) {
+      return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
     }
 
-    // ✅ Verify token
-    let decoded;
-    try {
-      decoded = jwt.verify(token, process.env.JWT_SECRET);
-    } catch (err) {
-      return NextResponse.json({ success: false, message: "Invalid token" }, { status: 401 });
-    }
-
-    const userId = decoded.userId;
-
-    // ✅ Confirm user exists
-    const user = await User.findById(userId);
-    if (!user) {
-      return NextResponse.json({ success: false, message: "User not found" }, { status: 404 });
-    }
+    const { id, email, firstName, surname } = session.user;
 
     // ✅ Parse form data
     const formData = await request.formData();
-    const firstName = formData.get("firstName");
-    const surname = formData.get("surname");
-    const reporterEmail = formData.get("reporterEmail");
     const location = formData.get("location");
     const googleLocation = formData.get("googleLocation");
     const description = formData.get("description");
@@ -50,7 +31,7 @@ export async function POST(request) {
       return NextResponse.json({ success: false, message: "No images uploaded" }, { status: 400 });
     }
 
-    // ✅ Upload images to Cloudinary using base64
+    // ✅ Upload images to Cloudinary
     const uploadedImages = await Promise.all(
       files.map(async (file) => {
         const arrayBuffer = await file.arrayBuffer();
@@ -65,17 +46,17 @@ export async function POST(request) {
 
     // ✅ Save report to DB
     const newReport = await Report.create({
-      userId,
+      userId: id,
       firstName,
       surname,
-      reporterEmail,
+      reporterEmail: email,
       location,
       googleLocation,
       description,
       urgency,
       jobType,
       images: uploadedImages,
-      status: "Pending"
+      status: "Pending",
     });
 
     return NextResponse.json({ success: true, message: "Report submitted", report: newReport });

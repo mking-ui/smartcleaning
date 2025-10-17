@@ -3,41 +3,33 @@ import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import { assets } from "@/assets/assets";
 import Loading from "@/components/Loading";
-import { useRouter } from "next/navigation";
 import Footer from "@/components/cleaner/Footer";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 
-const CleanerPendingReports = ({ cleanerId: propCleanerId }) => {
+const CleanerPendingReports = () => {
+  const { data: session, status } = useSession();
   const router = useRouter();
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedReport, setSelectedReport] = useState(null);
-  const [cleanerId, setCleanerId] = useState(propCleanerId || null);
 
-  // 🔹 Get cleaner ID from localStorage if not passed as prop
-  useEffect(() => {
-    if (!propCleanerId) {
-      const storedId = localStorage.getItem("userId");
-      if (storedId) {
-        setCleanerId(storedId);
-      } else {
-        console.warn("Cleaner ID not found in localStorage");
-        setLoading(false);
-      }
-    }
-  }, [propCleanerId]);
-
-  // 🔹 Fetch assigned reports
-  const fetchReports = async (id) => {
+  // Fetch reports assigned to this cleaner
+  const fetchReports = async (cleanerEmail) => {
     try {
-      const res = await fetch(`/api/report/assign?cleanerId=${id}`, {
+      const res = await fetch("/api/report/assign", {
         method: "GET",
         credentials: "include",
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message);
+      if (!res.ok) throw new Error(data.message || "Failed to fetch reports");
 
-      const pending = data.reports.filter((r) => r.status === "Approved");
-      setReports(pending);
+      // 🔹 Filter only reports assigned to this cleaner
+      const cleanerReports = (data.reports || []).filter(
+        (report) => report.assignedCleaner?.email === cleanerEmail
+      );
+
+      setReports(cleanerReports);
     } catch (error) {
       console.error("Failed to fetch assigned reports:", error.message);
     } finally {
@@ -45,14 +37,20 @@ const CleanerPendingReports = ({ cleanerId: propCleanerId }) => {
     }
   };
 
+  // Wait for session to load before fetching
   useEffect(() => {
-    if (cleanerId) fetchReports(cleanerId);
-  }, [cleanerId]);
+    if (status === "authenticated" && session?.user?.email) {
+      fetchReports(session.user.email);
+    } else if (status === "unauthenticated") {
+      router.push("/login");
+    }
+  }, [status, session]);
 
-  // 🔹 Accept task handler
+  // ✅ Accept task handler (now includes cleanerId)
   const handleAccept = async (reportId) => {
-    if (!cleanerId) {
-      alert("Cleaner ID missing. Please re-login.");
+    if (!session?.user?.id) {
+      alert("Authentication error: please log in again.");
+      router.push("/login");
       return;
     }
 
@@ -60,7 +58,10 @@ const CleanerPendingReports = ({ cleanerId: propCleanerId }) => {
       const res = await fetch("/api/report/accept-task", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ reportId, cleanerId }),
+        body: JSON.stringify({
+          reportId,
+          cleanerId: session.user.id, // ✅ Use cleaner ID from NextAuth session
+        }),
       });
 
       const data = await res.json();
@@ -74,7 +75,6 @@ const CleanerPendingReports = ({ cleanerId: propCleanerId }) => {
     }
   };
 
-  // 🔹 Render
   return (
     <div className="flex-1 h-screen overflow-scroll flex flex-col justify-between text-sm">
       {loading ? (

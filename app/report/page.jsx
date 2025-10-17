@@ -3,8 +3,11 @@ import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { assets } from "@/assets/assets";
 import toast from "react-hot-toast";
+import { useSession } from "next-auth/react";
 
 const ReportCleaningSpace = () => {
+  const { data: session, status } = useSession();
+
   const [files, setFiles] = useState([]);
   const [firstName, setReporterFname] = useState("");
   const [surname, setReporterSname] = useState("");
@@ -14,21 +17,26 @@ const ReportCleaningSpace = () => {
   const [description, setDescription] = useState("");
   const [urgency, setUrgency] = useState("Normal");
   const [jobType, setJobType] = useState("Spillage");
-  const [isSubmiting, setIsSubmiting] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Autofill email from localStorage
+  // ✅ Autofill user info from session
   useEffect(() => {
-    const email = localStorage.getItem("email");
-    const firstName = localStorage.getItem("firstName");
-    const surname = localStorage.getItem("surname");
-    if (email) setReporterEmail(email);
-    if (firstName) setReporterFname(firstName);
-    if (surname) setReporterSname(surname);
-  }, []);
+    if (session?.user) {
+      setReporterEmail(session.user.email || "");
+      setReporterFname(session.user.firstName || "");
+      setReporterSname(session.user.surname || "");
+    }
+  }, [session]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setIsSubmiting(true)
+    setIsSubmitting(true);
+
+    if (status === "unauthenticated") {
+      toast.error("You must be logged in to submit a report.");
+      setIsSubmitting(false);
+      return;
+    }
 
     try {
       const formData = new FormData();
@@ -48,7 +56,6 @@ const ReportCleaningSpace = () => {
       const res = await fetch("/api/report", {
         method: "POST",
         body: formData,
-        credentials: "include"
       });
 
       const data = await res.json();
@@ -60,13 +67,38 @@ const ReportCleaningSpace = () => {
 
       toast.success("Report submitted successfully!");
       console.log("Submitted Report:", data.report);
+
+      // Reset form after success
+      setDescription("");
+      setFiles([]);
+      setJobType("Spillage");
+      setUrgency("Normal");
+      setGoogleLocation("");
+      setLocation("");
     } catch (error) {
       toast.error("Error: " + error.message);
-    }
-    finally {
-      setIsSubmiting(false)
+    } finally {
+      setIsSubmitting(false);
     }
   };
+
+  // ✅ Handle loading state
+  if (status === "loading") {
+    return (
+      <div className="flex items-center justify-center h-screen text-lg">
+        Loading your profile...
+      </div>
+    );
+  }
+
+  // ✅ Handle unauthenticated users
+  if (status === "unauthenticated") {
+    return (
+      <div className="flex items-center justify-center h-screen text-lg">
+        Please log in to submit a report.
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 min-h-screen justify-between bg-slate-100 text-black">
@@ -81,42 +113,39 @@ const ReportCleaningSpace = () => {
 
         {/* Reporter Name & Email */}
         <div className="flex flex-col sm:flex-row gap-4 w-full">
-          <div className="flex flex-col gap-1 w-full sm:w-1/2">
-            <label htmlFor="reporterFname" className="text-base font-medium">
-              Reporter FirstName
+          <div className="flex flex-col gap-1 w-full sm:w-1/3">
+            <label htmlFor="firstName" className="text-base font-medium">
+              Reporter First Name
             </label>
             <input
               id="firstName"
               type="text"
-              placeholder="Your first name"
               className="outline-none py-2 px-3 rounded border border-gray-400 w-full bg-gray-100"
               value={firstName}
               readOnly
               required
             />
           </div>
-          <div className="flex flex-col gap-1 w-full sm:w-1/2">
-            <label htmlFor="reporterSname" className="text-base font-medium">
+          <div className="flex flex-col gap-1 w-full sm:w-1/3">
+            <label htmlFor="surname" className="text-base font-medium">
               Reporter Surname
             </label>
             <input
               id="surname"
               type="text"
-              placeholder="Your surname"
               className="outline-none py-2 px-3 rounded border border-gray-400 w-full bg-gray-100"
               value={surname}
               readOnly
               required
             />
           </div>
-          <div className="flex flex-col gap-1 w-full sm:w-1/2">
+          <div className="flex flex-col gap-1 w-full sm:w-1/3">
             <label htmlFor="reporterEmail" className="text-base font-medium">
               Reporter Email
             </label>
             <input
               id="reporterEmail"
               type="email"
-              placeholder="Your email"
               className="outline-none py-2 px-3 rounded border border-gray-400 w-full bg-gray-100"
               value={reporterEmail}
               readOnly
@@ -253,9 +282,9 @@ const ReportCleaningSpace = () => {
         <button
           type="submit"
           className="w-full px-8 py-2.5 text-emerald-900 bg-yellow-400 hover:text-yellow-400 font-medium rounded hover:bg-emerald-800"
-          disabled={isSubmiting}
+          disabled={isSubmitting}
         >
-          {isSubmiting ? "Please wait ...." : " Submit Report"}
+          {isSubmitting ? "Please wait ...." : "Submit Report"}
         </button>
       </form>
     </div>

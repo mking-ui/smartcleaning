@@ -1,40 +1,53 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import Image from "next/image";
+import { useSession } from "next-auth/react";
 import { assets } from "@/assets/assets";
 import Loading from "@/components/Loading";
 import Footer from "@/components/report/Footer";
 import { useRouter } from "next/navigation";
+import { toast } from "react-hot-toast";
 
 const ReportHistory = () => {
   const router = useRouter();
+  const { data: session, status } = useSession();
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Load cached history first
+  // Redirect if not logged in
   useEffect(() => {
-    const cached = localStorage.getItem("reportHistory");
-    if (cached) {
-      setReports(JSON.parse(cached));
-      setLoading(false);
+    if (status === "unauthenticated") {
+      toast.error("Please log in to view your reports.");
+      router.push("/login");
     }
-    fetchReports(); // Fetch fresh data in background
-  }, []);
+  }, [status, router]);
+
+  // Fetch reports once authenticated
+  useEffect(() => {
+    if (status === "authenticated") {
+      fetchReports();
+    }
+  }, [status]);
 
   const fetchReports = async () => {
     try {
       const res = await fetch("/api/history", {
         method: "GET",
-        credentials: "include"
+        credentials: "include",
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message);
+
+      if (!res.ok) {
+        toast.error(data.message || "Failed to load reports.");
+        return;
+      }
 
       setReports(data.reports);
       localStorage.setItem("reportHistory", JSON.stringify(data.reports));
     } catch (error) {
-      console.error("Failed to fetch reports:", error.message);
+      console.error("Error fetching reports:", error.message);
+      toast.error("Network error while loading reports.");
     } finally {
       setLoading(false);
     }
@@ -65,16 +78,17 @@ const ReportHistory = () => {
     return "";
   };
 
+  if (status === "loading" || loading) return <Loading />;
+
   return (
     <div className="flex-1 h-screen overflow-scroll flex flex-col justify-between text-sm">
-      {loading ? (
-        <Loading />
-      ) : (
-        <div className="md:p-10 p-4 space-y-5">
-          <h2 className="text-lg font-medium">Report History</h2>
-          <div className="max-w-4xl rounded-md">
+      <div className="md:p-10 p-4 space-y-5">
+        <h2 className="text-lg font-medium">
+          Report History for {session?.user?.firstName} {session?.user?.surname}
+        </h2>
 
-            {reports.length > 0 ? (
+        <div className="max-w-4xl rounded-md">
+          {reports.length > 0 ? (
             reports.map((report, index) => (
               <div
                 key={index}
@@ -112,17 +126,22 @@ const ReportHistory = () => {
                 {/* Reporter & Location */}
                 <div>
                   <p>
-                    <span className="font-medium">{report.reporterName}</span>
+                    <span className="font-medium">
+                      {report.firstName} {report.surname}
+                    </span>
                     <br />
                     <span>{report.location}</span>
                     <br />
-                    <a
-                      href={report.googleLocation}
-                      target="_blank"
-                      className="text-blue-500 underline"
-                    >
-                      Google Maps
-                    </a>
+                    {report.googleLocation && (
+                      <a
+                        href={report.googleLocation}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-500 underline"
+                      >
+                        Google Maps
+                      </a>
+                    )}
                   </p>
                 </div>
 
@@ -141,15 +160,12 @@ const ReportHistory = () => {
                   </p>
                 </div>
               </div>
-            ))): (
-              <p className="text-gray-500">No reports found.</p>
-          
+            ))
+          ) : (
+            <p className="text-gray-500">No reports found.</p>
           )}
-
-
-          </div>
         </div>
-      )}
+      </div>
       <Footer />
     </div>
   );

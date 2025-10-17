@@ -1,36 +1,72 @@
 import { NextResponse } from "next/server";
-import jwt from "jsonwebtoken";
+import { getServerSession } from "next-auth";
+import CredentialsProvider from "next-auth/providers/credentials";
 import connectDB from "@/config/db";
 import User from "@/models/User";
 import Report from "@/models/Report";
+import bcrypt from "bcrypt";
 
-export async function GET(request) {
+// ✅ Define inline authOptions (same as in your [...nextauth] route)
+const authOptions = {
+  providers: [
+    CredentialsProvider({
+      name: "Credentials",
+      credentials: {
+        username: { label: "Username", type: "text" },
+        password: { label: "Password", type: "password" },
+        role: { label: "Role", type: "text" },
+      },
+      async authorize(credentials) {
+        await connectDB();
+        const { username, password, role } = credentials;
+
+        const user = await User.findOne({ username });
+        if (!user) throw new Error("User not found");
+        if (user.role !== role) throw new Error("Invalid role");
+
+        const isMatch = await bcrypt.compare(password, user.password);
+        if (!isMatch) throw new Error("Incorrect password");
+
+        return {
+          id: user._id.toString(),
+          username: user.username,
+          email: user.email,
+          role: user.role,
+          firstName: user.firstName,
+          surname: user.surname,
+        };
+      },
+    }),
+  ],
+  session: { strategy: "jwt" },
+  secret: process.env.NEXTAUTH_SECRET,
+};
+
+// ✅ GET: Fetch only logged-in user’s reports
+export async function GET(req) {
   try {
+    const session = await getServerSession(authOptions);
+
+    if (!session || !session.user?.email) {
+      return NextResponse.json(
+        { success: false, message: "Unauthorized access" },
+        { status: 401 }
+      );
+    }
+
     await connectDB();
 
-    const token = request.cookies.get("token")?.value;
-    if (!token) {
-      return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
-    }
-
-    let decoded;
-    try {
-      decoded = jwt.verify(token, process.env.JWT_SECRET);
-    } catch {
-      return NextResponse.json({ success: false, message: "Invalid token" }, { status: 401 });
-    }
-
-    const userId = decoded.userId;
-    const user = await User.findById(userId);
-    if (!user) {
-      return NextResponse.json({ success: false, message: "User not found" }, { status: 404 });
-    }
-
-    const reports = await Report.find({ userId }).sort({ createdAt: -1 });
+    // ✅ Fetch reports created by this specific user
+    const reports = await Report.find({
+      reporterEmail: session.user.email,
+    }).sort({ createdAt: -1 });
 
     return NextResponse.json({ success: true, reports });
   } catch (error) {
-    console.error("Error fetching report history:", error);
-    return NextResponse.json({ success: false, message: error.message }, { status: 500 });
+    console.error("Error fetching user reports:", error);
+    return NextResponse.json(
+      { success: false, message: error.message },
+      { status: 500 }
+    );
   }
 }

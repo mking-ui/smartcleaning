@@ -1,72 +1,51 @@
 "use client";
-import { useRouter } from "next/navigation";
-import React, { useState } from "react";
+import { signIn } from "next-auth/react";
 import toast from "react-hot-toast";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+
 
 const LoginForm = ({ isOpen, onClose }) => {
 
-  const router = useRouter();
   const [role, setRole] = useState("Reporter");
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [isSubmiting, setIsSubmiting] = useState(false);
-
-
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setIsSubmiting(true);
-
-    try {
-      const res = await fetch("/api/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        credentials: "include", // ✅ this sends cookies
-        body: JSON.stringify({ role, username, password })
+    const [username, setUsername] = useState("");
+    const [password, setPassword] = useState("");
+    const router = useRouter();
+    const [isSubmiting, setIsSubmiting]= useState(false);
+  
+    const handleSubmit = async (e) => {
+      setIsSubmiting(true);
+      e.preventDefault();
+  
+      try {
+          const res = await signIn("credentials", {
+        redirect: false,
+        username,
+        password,
+        role,
       });
-
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        toast.error(data.message || "Login failed");
-        return;
-      }
-
-      toast.success("Login successful!");
-
-
-      // Optionally store token
-      localStorage.setItem("userId", data.user._id);
-      localStorage.setItem("role", data.user.role);
-      localStorage.setItem("username", data.user.username);
-      localStorage.setItem("email", data.user.email);
-      localStorage.setItem("firstName", data.user.firstName);
-      localStorage.setItem("surname", data.user.surname);
-
-
-
-      // Redirect based on role
-      if (data.user.role === "Supervisor") {
-        router.push("/supervisor");
-      } else if (data.user.role === "Cleaner") {
-        router.push("/cleaner");
+  
+      if (res.error) {
+        toast.error(res.error);
       } else {
-        router.push("/report");
+        toast.success("Login successful!");
+        if (role === "Supervisor") router.push("/supervisor");
+        else if (role === "Cleaner") router.push("/cleaner");
+        else router.push("/report");
       }
-      console.log("Redirecting to:", data.user.role);
-
       onClose();
-
-    } catch (error) {
-      toast.error("Error: " + error.message);
-    }
-    finally {
-      setIsSubmiting(false)
-    }
-  };
+     
+        
+      } catch (error) {
+         toast.error("Error: " + error.message);
+        
+      }
+      finally {
+        setIsSubmiting(false)
+      }
+    
+     
+    };
 
   if (!isOpen) return null;
 

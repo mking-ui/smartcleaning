@@ -1,85 +1,93 @@
 "use client";
 import React, { useState } from "react";
-import Image from "next/image";
-import { assets } from "@/assets/assets";
+import { toast } from "react-hot-toast";
 
 const UpdateProfileForm = ({ user }) => {
-  const [fullName, setFullName] = useState(user?.fullName || "");
-  const [email, setEmail] = useState(user?.email || "");
+  const [firstName, setFirstName] = useState(user?.firstName || "");
+  const [surname, setSurname] = useState(user?.surname || "");
+  const [email] = useState(user?.email || "");
   const [phone, setPhone] = useState(user?.phone || "");
   const [username, setUsername] = useState(user?.username || "");
-  const [profilePic, setProfilePic] = useState(null);
 
-  // password fields
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
   const [showConfirm, setShowConfirm] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = (e) => {
     e.preventDefault();
+
     if (newPassword && newPassword !== confirmPassword) {
-      alert("New password and confirm password do not match.");
+      toast.error("New password and confirmation do not match");
       return;
     }
+
     setShowConfirm(true);
   };
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     setShowConfirm(false);
-    console.log({
-      fullName,
-      email,
-      phone,
-      username,
-      profilePic,
-      currentPassword,
-      newPassword,
-    });
+    setLoading(true);
+
+    try {
+      const res = await fetch("/api/user/update", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          firstName,
+          surname,
+          email,
+          phone,
+          username,
+          currentPassword,
+          newPassword,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to update profile");
+
+      toast.success(data.message || "Profile updated successfully!");
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (error) {
+      toast.error(error.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="flex-1 min-h-screen bg-slate-100 p-6 md:p-10">
-      <div className="bg-white  shadow-xl max-w-3xl mx-auto p-6">
+      <div className="bg-white shadow-xl max-w-3xl mx-auto p-6 rounded-lg">
         <h2 className="text-2xl font-bold text-emerald-900 mb-6 text-center">
           Update Profile
         </h2>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Profile Picture */}
-          <div className="flex flex-col items-center">
-            <label htmlFor="profile-pic" className="cursor-pointer">
-              <input
-                type="file"
-                id="profile-pic"
-                hidden
-                accept="image/*"
-                onChange={(e) => setProfilePic(e.target.files[0])}
-              />
-              <Image
-                src={
-                  profilePic
-                    ? URL.createObjectURL(profilePic)
-                    : assets.upload_area
-                }
-                alt="Profile Picture"
-                width={100}
-                height={100}
-                className="w-24 h-24 object-cover rounded-full border"
-              />
-            </label>
-            <p className="text-sm text-gray-500 mt-2">Click to upload</p>
-          </div>
-
-          {/* Full Name */}
+          {/* First Name */}
           <div>
-            <label className="font-medium">Full Name</label>
+            <label className="font-medium">First Name</label>
             <input
               type="text"
               className="w-full border rounded px-3 py-2"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
+              required
+            />
+          </div>
+
+          {/* Surname */}
+          <div>
+            <label className="font-medium">Surname</label>
+            <input
+              type="text"
+              className="w-full border rounded px-3 py-2"
+              value={surname}
+              onChange={(e) => setSurname(e.target.value)}
               required
             />
           </div>
@@ -89,10 +97,9 @@ const UpdateProfileForm = ({ user }) => {
             <label className="font-medium">Email</label>
             <input
               type="email"
-              className="w-full border rounded px-3 py-2"
+              className="w-full border rounded px-3 py-2 bg-gray-100 cursor-not-allowed"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
+              disabled
             />
           </div>
 
@@ -120,7 +127,7 @@ const UpdateProfileForm = ({ user }) => {
             />
           </div>
 
-          {/* Password Update */}
+          {/* Password Section */}
           <div className="border-t pt-4 mt-4">
             <h3 className="font-semibold text-emerald-900 mb-2">
               Change Password
@@ -152,9 +159,10 @@ const UpdateProfileForm = ({ user }) => {
 
           <button
             type="submit"
+            disabled={loading}
             className="w-full bg-yellow-400 text-emerald-900 font-semibold py-2 rounded hover:opacity-90 transition"
           >
-            Save Changes
+            {loading ? "Saving..." : "Save Changes"}
           </button>
         </form>
       </div>

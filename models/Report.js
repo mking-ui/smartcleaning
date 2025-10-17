@@ -75,8 +75,8 @@ const reportSchema = new mongoose.Schema({
   createdAt: {
     type: Date,
     default: Date.now
-  }
-});
+  },
+}, { timestamps: true })
 
 const Report =
   mongoose.models.Report || mongoose.model("Report", reportSchema);

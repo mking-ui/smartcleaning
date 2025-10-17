@@ -1,10 +1,12 @@
 "use client";
+
 import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import { assets } from "@/assets/assets";
 import Footer from "@/components/supervisor/Footer";
 import Loading from "@/components/Loading";
 import { useRouter } from "next/navigation";
+import { toast } from "react-hot-toast"; // ✅ Optional toast for better UX
 
 const PendingReports = () => {
   const router = useRouter();
@@ -12,22 +14,24 @@ const PendingReports = () => {
   const [loading, setLoading] = useState(true);
   const [selectedReport, setSelectedReport] = useState(null);
 
-  // Load cached pending reports first
+  // ✅ Load cached reports first, then fetch fresh data
   useEffect(() => {
     const cached = localStorage.getItem("pendingReports");
     if (cached) {
       setReports(JSON.parse(cached));
       setLoading(false);
     }
-    fetchReports(); // Fetch fresh data in background
+    fetchReports(); // Always refresh in the background
   }, []);
 
+  // ✅ Fetch pending reports (NextAuth handles session via cookies automatically)
   const fetchReports = async () => {
     try {
       const res = await fetch("/api/report/pending", {
         method: "GET",
-        credentials: "include"
+        credentials: "include",
       });
+
       const data = await res.json();
       if (!res.ok) throw new Error(data.message);
 
@@ -35,31 +39,36 @@ const PendingReports = () => {
       localStorage.setItem("pendingReports", JSON.stringify(data.reports));
     } catch (error) {
       console.error("Failed to fetch pending reports:", error.message);
+      toast.error("Failed to load pending reports");
     } finally {
       setLoading(false);
     }
   };
 
+  // ✅ Handle supervisor approval
   const handleApprove = async () => {
     try {
       const res = await fetch("/api/report/update", {
         method: "PUT",
         headers: {
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify({ reportId: selectedReport._id })
+        credentials: "include",
+        body: JSON.stringify({ reportId: selectedReport._id }),
       });
 
       const data = await res.json();
       if (!res.ok) throw new Error(data.message);
 
-      // Remove approved report from list and update cache
+      // ✅ Update UI and cache after successful approval
       const updated = reports.filter((r) => r._id !== selectedReport._id);
       setReports(updated);
       localStorage.setItem("pendingReports", JSON.stringify(updated));
       setSelectedReport(null);
+      toast.success("Report approved successfully!");
     } catch (error) {
       console.error("Approval failed:", error.message);
+      toast.error(error.message || "Approval failed");
     }
   };
 
@@ -151,7 +160,7 @@ const PendingReports = () => {
         </div>
       )}
 
-      {/* Modal */}
+      {/* ✅ Modal */}
       {selectedReport && (
         <div className="fixed inset-0 flex items-center justify-center bg-black/60 z-50">
           <div className="bg-white rounded-lg shadow-lg p-6 max-w-2xl w-full relative">
@@ -161,6 +170,7 @@ const PendingReports = () => {
             >
               ✕
             </button>
+
             <h2 className="text-lg font-bold mb-3">{selectedReport.jobType}</h2>
             <p className="mb-2">{selectedReport.description}</p>
             <p className="mb-2">
@@ -179,19 +189,23 @@ const PendingReports = () => {
 
             {/* Images */}
             <div className="grid grid-cols-2 gap-3 mb-4">
-              {selectedReport.images.map((img, idx) => (
-                <Image
-                  key={idx}
-                  src={img.url}
-                  alt={`report_img_${idx}`}
-                  width={200}
-                  height={200}
-                  className="rounded object-cover"
-                />
-              ))}
+              {selectedReport.images?.length > 0 ? (
+                selectedReport.images.map((img, idx) => (
+                  <Image
+                    key={idx}
+                    src={img.url}
+                    alt={`report_img_${idx}`}
+                    width={200}
+                    height={200}
+                    className="rounded object-cover"
+                  />
+                ))
+              ) : (
+                <p className="text-gray-500 col-span-2">No images available</p>
+              )}
             </div>
 
-            {/* Approve button */}
+            {/* Approve Button */}
             <button
               onClick={handleApprove}
               className="w-full py-2 bg-green-600 text-white rounded hover:bg-green-700"
