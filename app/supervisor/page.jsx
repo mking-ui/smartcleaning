@@ -1,7 +1,6 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import Loading from "@/components/Loading"; // ✅ use your existing component
 import {
   PieChart,
   Pie,
@@ -14,6 +13,7 @@ import {
   YAxis,
   CartesianGrid,
 } from "recharts";
+import Loading from "@/components/Loading";
 
 const SupervisorDashboard = () => {
   const [reportSummary, setReportSummary] = useState([]);
@@ -93,11 +93,9 @@ const SupervisorDashboard = () => {
     reportSummary.length === 0 ||
     weeklyJobs.length === 0
   ) {
-    return (
-      <div className="flex justify-center items-center h-[80vh]">
-        <Loading message="Loading dashboard data..." />
-      </div>
-    );
+    return  <Loading/>
+     
+    
   }
 
   // ✅ Render once data is ready
