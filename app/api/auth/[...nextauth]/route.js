@@ -15,19 +15,35 @@ export const authOptions = {
         password: { label: "Password", type: "password" },
         role: { label: "Role", type: "text" },
       },
+
       async authorize(credentials) {
         await connectDB();
 
-        const user = await User.findOne({
-          username: credentials.username,
-          role: credentials.role,
-        });
+        const { username, password, role } = credentials;
 
-        if (!user) throw new Error("Invalid username or role");
+        // 🔹 Validate fields first
+        if (!username || !password || !role) {
+          throw new Error("Please fill in all required fields");
+        }
 
-        const isMatch = await bcrypt.compare(credentials.password, user.password);
-        if (!isMatch) throw new Error("Invalid password");
+        // 🔹 Check if user exists
+        const user = await User.findOne({ username });
+        if (!user) {
+          throw new Error("Username not found");
+        }
 
+        // 🔹 Check role match
+        if (user.role !== role) {
+          throw new Error("User role not matching");
+        }
+
+        // 🔹 Verify password
+        const isMatch = await bcrypt.compare(password, user.password);
+        if (!isMatch) {
+          throw new Error("Incorrect password");
+        }
+
+        // ✅ Return user details if all checks pass
         return {
           id: user._id.toString(),
           username: user.username,
@@ -43,14 +59,15 @@ export const authOptions = {
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        token.role = user.role;
         token.id = user.id;
+        token.role = user.role;
         token.email = user.email;
         token.firstName = user.firstName;
         token.surname = user.surname;
       }
       return token;
     },
+
     async session({ session, token }) {
       session.user.id = token.id;
       session.user.role = token.role;
@@ -67,5 +84,4 @@ export const authOptions = {
 };
 
 const handler = NextAuth(authOptions);
-
 export { handler as GET, handler as POST };

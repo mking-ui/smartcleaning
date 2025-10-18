@@ -6,17 +6,17 @@ import { useEffect, useState } from "react";
 
 
 const LoginForm = ({ isOpen, onClose }) => {
-  
-    const { data: session, status } = useSession();
+
+  const { data: session, status } = useSession();
 
   const [role, setRole] = useState("Reporter");
-    const [username, setUsername] = useState("");
-    const [password, setPassword] = useState("");
-    const router = useRouter();
-    const [isSubmiting, setIsSubmiting]= useState(false);
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const router = useRouter();
+  const [isSubmiting, setIsSubmiting] = useState(false);
 
-     useEffect(() => {
-   
+  useEffect(() => {
+
     if (status === "authenticated" && session?.user?.role) {
       const userRole = session.user.role;
       if (userRole === "Supervisor") router.push("/supervisor");
@@ -24,38 +24,38 @@ const LoginForm = ({ isOpen, onClose }) => {
       else router.push("/report");
     }
   }, [status, session, router]);
-  
-    const handleSubmit = async (e) => {
-      setIsSubmiting(true);
-      e.preventDefault();
-  
-      try {
-          const res = await signIn("credentials", {
+
+  const handleSubmit = async (e) => {
+    setIsSubmiting(true);
+    e.preventDefault();
+
+    try {
+      const res = await signIn("credentials", {
         redirect: false,
         username,
         password,
         role,
       });
-  await getSession();
+      await getSession();
       if (res.error) {
         toast.error(res.error);
       } else {
         toast.success("Login successful!");
-        
+
       }
       onClose();
-     
-        
-      } catch (error) {
-         toast.error("Error: " + error.message);
-        
-      }
-      finally {
-        setIsSubmiting(false)
-      }
-    
-     
-    };
+
+
+    } catch (error) {
+      toast.error("Error: " + error.message);
+
+    }
+    finally {
+      setIsSubmiting(false)
+    }
+
+
+  };
 
   if (!isOpen) return null;
 

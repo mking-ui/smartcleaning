@@ -82,9 +82,6 @@ const SupervisorDashboard = () => {
 
   useEffect(() => {
     fetchDashboardData();
-
-    const interval = setInterval(fetchDashboardData, 100000);
-    return () => clearInterval(interval);
   }, []);
 
   // ✅ Show loading until data is available
@@ -94,8 +91,6 @@ const SupervisorDashboard = () => {
     weeklyJobs.length === 0
   ) {
     return  <Loading/>
-     
-    
   }
 
   // ✅ Render once data is ready
