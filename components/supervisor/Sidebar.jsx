@@ -9,11 +9,11 @@ const SideBar = () => {
     const menuItems = [
 
         { name: 'Overview', path: '/supervisor', icon: assets.product_list_icon },
-        { name: 'Manage Report', path: '/supervisor/reports', icon: assets.add_icon },
         { name: 'Pending Report', path: '/supervisor/pending', icon: assets.add_icon },
+         { name: 'Assign Cleaner', path: '/supervisor/reports', icon: assets.add_icon },
         { name: 'In-progress', path: '/supervisor/progress', icon: assets.add_icon },
         { name: 'Completed', path: '/supervisor/complete', icon: assets.add_icon },
-        { name: 'Staff Management', path: '/supervisor/staff', icon: assets.product_list_icon },
+        { name: 'Staff Info', path: '/supervisor/staff', icon: assets.product_list_icon },
         { name: 'Profile', path: '/supervisor/profile', icon: assets.order_icon },
     ];
 
