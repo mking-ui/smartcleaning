@@ -72,8 +72,7 @@ const SupervisorDashboard = () => {
   useEffect(() => {
 
     fetchDashboardData();
-    
-
+  
   }, [fetchDashboardData]);
 
   // ✅ Conditional Rendering

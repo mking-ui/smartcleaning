@@ -6,17 +6,6 @@ export default withAuth(
     const { pathname } = req.nextUrl;
     const role = req.nextauth.token?.role;
 
-    // 🚫 Redirect already logged-in users away from login/register pages
-    if (
-      role &&
-      (pathname.startsWith("/login") || pathname.startsWith("/register"))
-    ) {
-      let redirectUrl = "/report"; // default redirect
-      if (role === "Supervisor") redirectUrl = "/supervisor";
-      else if (role === "Cleaner") redirectUrl = "/cleaner";
-      return Response.redirect(new URL(redirectUrl, req.url));
-    }
-
     // 🔒 Role-based protection for specific routes
     if (pathname.startsWith("/supervisor") && role !== "Supervisor") {
       return Response.redirect(new URL("/login", req.url));
