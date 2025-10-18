@@ -1,7 +1,6 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { useSession } from "next-auth/react";
 import {
   PieChart,
   Pie,
@@ -16,12 +15,11 @@ import {
 } from "recharts";
 
 const SupervisorDashboard = () => {
-  const { data: session, status } = useSession();
   const [reportSummary, setReportSummary] = useState([]);
   const [weeklyJobs, setWeeklyJobs] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const userRole = session?.user?.role;
+
 
   const fetchDashboardData = async () => {
     try {
@@ -71,37 +69,16 @@ const SupervisorDashboard = () => {
 
   // ✅ Only fetch data when the user is authenticated AND role is supervisor
   useEffect(() => {
-    if (status === "authenticated" && userRole === "Supervisor") {
+    
       fetchDashboardData();
       const interval = setInterval(fetchDashboardData, 100000);
       return () => clearInterval(interval);
-    }
-  }, [status, userRole]);
+    
+  }, [fetchDashboardData]);
 
   // ✅ Conditional Rendering
-  if (status === "loading" || loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <p className="text-gray-500">Loading dashboard...</p>
-      </div>
-    );
-  }
 
-  if (status === "unauthenticated") {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <p className="text-gray-500">Please sign in to access the dashboard.</p>
-      </div>
-    );
-  }
 
-  if (userRole !== "supervisor") {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <p className="text-gray-500">Access restricted to supervisors only.</p>
-      </div>
-    );
-  }
 
   return (
     <div className="p-4 sm:p-6 space-y-8 w-full">

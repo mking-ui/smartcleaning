@@ -1,4 +1,3 @@
-// middleware.js
 import { withAuth } from "next-auth/middleware";
 
 export default withAuth(
@@ -6,18 +5,18 @@ export default withAuth(
     const { pathname } = req.nextUrl;
     const role = req.nextauth.token?.role;
 
-    // 🚫 Redirect already logged-in users away from login/register pages
+    // 🚫 Prevent logged-in users from visiting login/register
     if (
       role &&
       (pathname.startsWith("/login") || pathname.startsWith("/register"))
     ) {
-      let redirectUrl = "/report"; // default redirect
+      let redirectUrl = "/report"; // Default redirect
       if (role === "Supervisor") redirectUrl = "/supervisor";
       else if (role === "Cleaner") redirectUrl = "/cleaner";
       return Response.redirect(new URL(redirectUrl, req.url));
     }
 
-    // 🔒 Role-based protection for specific routes
+    // 🔒 Role-based route protection
     if (pathname.startsWith("/supervisor") && role !== "Supervisor") {
       return Response.redirect(new URL("/login", req.url));
     }
@@ -32,12 +31,21 @@ export default withAuth(
   },
   {
     callbacks: {
-      authorized: ({ token }) => !!token, // must have a valid session
+      authorized: ({ token, req }) => {
+        const { pathname } = req.nextUrl;
+
+        // ✅ Allow public access to login/register
+        if (pathname.startsWith("/login") || pathname.startsWith("/register")) {
+          return true;
+        }
+
+        // Require authentication for other routes
+        return !!token;
+      },
     },
   }
 );
 
-// 🧭 Routes to apply middleware to
 export const config = {
   matcher: [
     "/login",
