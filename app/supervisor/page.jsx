@@ -1,6 +1,7 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
 import {
   PieChart,
   Pie,
@@ -15,12 +16,13 @@ import {
 } from "recharts";
 
 const SupervisorDashboard = () => {
+  const { data: session, status } = useSession();
   const [reportSummary, setReportSummary] = useState([]);
   const [weeklyJobs, setWeeklyJobs] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
 
-  // ✅ Fetch reports by status from APIs
+  const userRole = session?.user?.role;
+
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
@@ -31,33 +33,21 @@ const SupervisorDashboard = () => {
         fetch("/api/report/completed"),
       ]);
 
+      if (!pendingRes.ok || !inProgressRes.ok || !completedRes.ok) {
+        console.warn("Some data failed to load");
+        return;
+      }
+
       const pendingData = await pendingRes.json();
       const inProgressData = await inProgressRes.json();
       const completedData = await completedRes.json();
 
-      if (!pendingRes.ok || !inProgressRes.ok || !completedRes.ok) {
-        throw new Error("Failed to fetch dashboard data");
-      }
-
       const summary = [
-        {
-          name: "Pending",
-          value: pendingData.reports?.length || 0,
-          color: "#facc15",
-        },
-        {
-          name: "In Progress",
-          value: inProgressData.reports?.length || 0,
-          color: "#3b82f6",
-        },
-        {
-          name: "Completed",
-          value: completedData.reports?.length || 0,
-          color: "#16a34a",
-        },
+        { name: "Pending", value: pendingData.reports?.length || 0, color: "#facc15" },
+        { name: "In Progress", value: inProgressData.reports?.length || 0, color: "#3b82f6" },
+        { name: "Completed", value: completedData.reports?.length || 0, color: "#16a34a" },
       ];
 
-      // ✅ Generate weekly job summary (based on creation date)
       const allReports = [
         ...(pendingData.reports || []),
         ...(inProgressData.reports || []),
@@ -67,31 +57,29 @@ const SupervisorDashboard = () => {
       const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
       const weeklyCount = days.map((day) => ({
         day,
-        jobs: allReports.filter((r) => {
-          const created = new Date(r.createdAt);
-          return created.getDay() === days.indexOf(day);
-        }).length,
+        jobs: allReports.filter((r) => new Date(r.createdAt).getDay() === days.indexOf(day)).length,
       }));
 
       setReportSummary(summary);
       setWeeklyJobs(weeklyCount);
     } catch (err) {
-      console.error(err);
-      setError(err.message);
+      console.warn("Error fetching dashboard data:", err.message);
     } finally {
       setLoading(false);
     }
   };
 
+  // ✅ Only fetch data when the user is authenticated AND role is supervisor
   useEffect(() => {
-    fetchDashboardData();
+    if (status === "authenticated" && userRole === "Supervisor") {
+      fetchDashboardData();
+      const interval = setInterval(fetchDashboardData, 100000);
+      return () => clearInterval(interval);
+    }
+  }, [status, userRole]);
 
-    // 🔁 Auto-refresh every 10 seconds
-    const interval = setInterval(fetchDashboardData, 100000);
-    return () => clearInterval(interval);
-  }, []);
-
-  if (loading) {
+  // ✅ Conditional Rendering
+  if (status === "loading" || loading) {
     return (
       <div className="flex items-center justify-center h-64">
         <p className="text-gray-500">Loading dashboard...</p>
@@ -99,10 +87,18 @@ const SupervisorDashboard = () => {
     );
   }
 
-  if (error) {
+  if (status === "unauthenticated") {
     return (
       <div className="flex items-center justify-center h-64">
-        <p className="text-red-500">Error: {error}</p>
+        <p className="text-gray-500">Please sign in to access the dashboard.</p>
+      </div>
+    );
+  }
+
+  if (userRole !== "supervisor") {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <p className="text-gray-500">Access restricted to supervisors only.</p>
       </div>
     );
   }

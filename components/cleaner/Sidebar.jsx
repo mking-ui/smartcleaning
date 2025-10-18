@@ -16,7 +16,7 @@ const SideBar = () => {
   ];
 
   return (
-    <div className="md:w-64 w-16 border-r min-h-screen text-slate-100 bg-emerald-800 border-gray-300 py-2 flex flex-col">
+    <div className="md:w-64 w-20 border-r min-h-screen text-slate-100 bg-emerald-800 border-gray-300 py-4 flex flex-col items-center md:items-stretch">
       {menuItems.map((item) => {
         const isActive = pathname === item.path;
 
@@ -24,10 +24,10 @@ const SideBar = () => {
           <Link
             href={item.path}
             key={item.name}
-            className={`flex items-center py-3 px-4 gap-3 ${
+            className={`flex flex-col md:flex-row items-center md:items-center py-3 md:py-2 px-2 md:px-4 gap-1 md:gap-5 text-center md:text-left  transition-all duration-300 ${
               isActive
-                ? "border-r-4 md:border-r-[6px] bg-yellow-400/10 border-yellow-500"
-                : "hover:bg-yellow-400/50 border-white"
+                ? "bg-yellow-400/20 border-r-4 md:border-r-[6px] border-yellow-500"
+                : "hover:bg-yellow-400/30"
             }`}
           >
             <Image
@@ -37,7 +37,7 @@ const SideBar = () => {
               height={28}
               className="w-7 h-7"
             />
-            <p className="md:block hidden text-center">{item.name}</p>
+            <p className="text-[11px] md:text-base font-medium leading-tight">{item.name}</p>
           </Link>
         );
       })}
