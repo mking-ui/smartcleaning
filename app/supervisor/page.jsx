@@ -72,8 +72,7 @@ const SupervisorDashboard = () => {
   useEffect(() => {
 
     fetchDashboardData();
-    const interval = setInterval(fetchDashboardData, 90000);
-    return () => clearInterval(interval);
+    
 
   }, [fetchDashboardData]);
 
