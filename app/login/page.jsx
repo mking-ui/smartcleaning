@@ -3,7 +3,7 @@ import { signIn, useSession, getSession } from "next-auth/react";
 
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 
 const LoginFormPage = () => {
@@ -18,7 +18,6 @@ const LoginFormPage = () => {
 
    // ✅ Automatically redirect when the session becomes available
   useEffect(() => {
-   
     if (status === "authenticated" && session?.user?.role) {
       const userRole = session.user.role;
       if (userRole === "Supervisor") router.push("/supervisor");
@@ -38,13 +37,17 @@ const LoginFormPage = () => {
       password,
       role,
     });
-        await getSession();
+    await getSession();
 
     if (res.error) {
       toast.error(res.error);
     } else {
       toast.success("Login successful!");
-   
+      await getSession();
+
+      if (role === "Supervisor")  router.push("/supervisor");
+      else if (role === "Cleaner")  router.push("/cleaner");
+      else  router.push("/report");
     }
    
       

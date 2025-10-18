@@ -1,8 +1,8 @@
 "use client";
-import { signIn, useSession, getSession } from "next-auth/react";
+import { getSession, signIn, useSession } from "next-auth/react";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 
 const LoginForm = ({ isOpen, onClose }) => {
@@ -15,7 +15,15 @@ const LoginForm = ({ isOpen, onClose }) => {
     const router = useRouter();
     const [isSubmiting, setIsSubmiting]= useState(false);
 
+     useEffect(() => {
    
+    if (status === "authenticated" && session?.user?.role) {
+      const userRole = session.user.role;
+      if (userRole === "Supervisor") router.push("/supervisor");
+      else if (userRole === "Cleaner") router.push("/cleaner");
+      else router.push("/report");
+    }
+  }, [status, session, router]);
   
     const handleSubmit = async (e) => {
       setIsSubmiting(true);
@@ -28,8 +36,7 @@ const LoginForm = ({ isOpen, onClose }) => {
         password,
         role,
       });
-      await getSession();
-  
+  await getSession();
       if (res.error) {
         toast.error(res.error);
       } else {
@@ -49,15 +56,6 @@ const LoginForm = ({ isOpen, onClose }) => {
     
      
     };
-      useEffect(() => {
-   
-    if (status === "authenticated" && session?.user?.role) {
-      const userRole = session.user.role;
-      if (userRole === "Supervisor") router.push("/supervisor");
-      else if (userRole === "Cleaner") router.push("/cleaner");
-      else router.push("/report");
-    }
-  }, [status, session, router]);
 
   if (!isOpen) return null;
 
