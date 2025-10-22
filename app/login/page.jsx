@@ -1,9 +1,9 @@
 "use client";
-import { signIn, useSession, getSession } from "next-auth/react";
+import { signIn, useSession } from "next-auth/react";
 
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import {  useState } from "react";
 import Link from "next/link";
 
 const LoginFormPage = () => {
@@ -12,56 +12,47 @@ const LoginFormPage = () => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const router = useRouter();
-  const [isSubmiting, setIsSubmiting]= useState(false);
+  const [isSubmiting, setIsSubmiting] = useState(false);
 
 
-
-   // ✅ Automatically redirect when the session becomes available
-  useEffect(() => {
-    if (status === "authenticated" && session?.user?.role) {
-      const userRole = session.user.role;
-      if (userRole === "Supervisor") router.push("/supervisor");
-      else if (userRole === "Cleaner") router.push("/cleaner");
-      else router.push("/report");
-    }
-  }, [status, session, router]);
+ 
 
   const handleSubmit = async (e) => {
     setIsSubmiting(true);
     e.preventDefault();
 
     try {
-        const res = await signIn("credentials", {
-      redirect: false,
-      username,
-      password,
-      role,
-    });
-    await getSession();
+      const res = await signIn("credentials", {
+        redirect: false,
+        username,
+        password,
+        role,
+      });
 
-    if (res.error) {
-      toast.error(res.error);
-    } else {
-      toast.success("Login successful!");
-      await getSession();
 
-      if (role === "Supervisor")  router.push("/supervisor");
-      else if (role === "Cleaner")  router.push("/cleaner");
-      else  router.push("/report");
-    }
-   
-      
+      if (res.error) {
+        toast.error(res.error);
+      } else {
+        toast.success("Login successful!");
+         // ✅ Redirect immediately based on role (no session waiting)
+      if (role === "Supervisor") router.replace("/supervisor");
+      else if (role === "Cleaner") router.replace("/cleaner");
+      else router.replace("/report");
+        
+      }
+
+
     } catch (error) {
-       toast.error("Error: " + error.message);
-      
+      toast.error("Error: " + error.message);
+
     }
     finally {
       setIsSubmiting(false)
     }
-  
-   
-  };
 
+
+  };
+ 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-emerald-800 overflow-y-auto">
       <div className="bg-white rounded-xl shadow-xl w-full max-w-md sm:max-w-lg p-6 relative my-8 mx-4 h-auto max-h-[90vh] overflow-y-auto">

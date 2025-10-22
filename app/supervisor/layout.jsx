@@ -19,9 +19,9 @@ const SupervisorLayout = ({ children }) => {
       router.push("/"); // redirect non-supervisors to home
     }
   }, [status, session, router]);
-  if (status === "loading") {
+  if (status === "loading" || !session) 
     return <Loading />;
-  }
+  
 
 
 

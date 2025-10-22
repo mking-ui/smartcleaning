@@ -21,9 +21,9 @@ const ReportLayout = ({ children }) => {
     }
   }, [status, session, router]);
 
-  if (status === "loading") {
+  if (status === "loading" || !session) 
     return <Loading/>;
-  }
+  
   return (
     <div>
       <Navbar  />
