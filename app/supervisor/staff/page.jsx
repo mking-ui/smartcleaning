@@ -72,7 +72,14 @@ export default function StaffReporterList() {
     }
   }
 
-  if (loading) return <Loading />;
+  if (loading) {
+     return (
+       <div className="flex justify-center items-center h-screen bg-gray-50">
+         <Loading />
+       </div>
+     );
+   }
+  
 
   return (
     <div className="flex-1 h-screen overflow-auto flex flex-col justify-between text-sm">

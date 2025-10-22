@@ -47,12 +47,18 @@ const ProgressReports = () => {
    
   }, [status]);
 
-  if (loading || status === "loading") return <Loading />;
-
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-screen bg-gray-50">
+        <Loading />
+      </div>
+    );
+  }
  
 
   return (
     <div className="flex-1 h-screen overflow-scroll flex flex-col justify-between text-sm">
+      
       <div className="md:p-10 p-4">
         <h2 className="text-lg font-bold text-emerald-900 mb-6">
           In-Progress Cleaning Tasks
