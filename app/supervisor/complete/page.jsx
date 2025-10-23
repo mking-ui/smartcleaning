@@ -10,6 +10,7 @@ const SupervisorCompleted = () => {
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState(null);
+  const [approving, setApproving] = useState(null); // Track approving state
 
   const fallbackImage = "/placeholder.png";
 
@@ -25,6 +26,7 @@ const SupervisorCompleted = () => {
       if (!res.ok) throw new Error(data.message || "Failed to fetch reports");
 
       setReports(data.reports || []);
+      localStorage.setItem("completedReports", JSON.stringify(data.reports));
     } catch (error) {
       console.error("Error fetching completed reports:", error.message);
     } finally {
@@ -33,10 +35,43 @@ const SupervisorCompleted = () => {
   };
 
   useEffect(() => {
+    const cached = localStorage.getItem("completedReports");
+    if (cached) {
+      setReports(JSON.parse(cached));
+      setLoading(false);
+    }
     fetchReports();
-    const interval = setInterval(fetchReports, 10000); // auto-refresh
+    const interval = setInterval(fetchReports, 10000);
     return () => clearInterval(interval);
   }, []);
+
+  // ✅ Approve Task
+  const handleApprove = async (reportId) => {
+    if (!reportId) return;
+    setApproving(reportId);
+
+    try {
+      const res = await fetch(`/api/report/approve/${reportId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Failed to approve report");
+
+      // ✅ Update UI instantly
+      setReports((prev) =>
+        prev.map((r) =>
+          r._id === reportId ? { ...r, status: "Approved" } : r
+        )
+      );
+    } catch (error) {
+      console.error("Error approving report:", error.message);
+    } finally {
+      setApproving(null);
+    }
+  };
 
   // ✅ Date Formatter
   const formatDateTime = (dateString) => {
@@ -108,12 +143,30 @@ const SupervisorCompleted = () => {
                           ? formatDateTime(report.updatedAt)
                           : "Unknown"}
                       </p>
-                      <p className="text-xs font-semibold mt-1 px-2 py-1 rounded w-fit bg-green-100 text-green-700">
-                        {report.status}
-                      </p>
+
+                      {/* ✅ Status / Approve Button */}
+                      {report.status === "Approved" ? (
+                        <p className="text-xs font-semibold mt-2 px-2 py-1 rounded w-fit bg-green-100 text-green-700">
+                          Approved
+                        </p>
+                      ) : (
+                        <button
+                          onClick={() => handleApprove(report._id)}
+                          disabled={approving === report._id}
+                          className={`mt-2 px-3 py-1 rounded text-white text-xs font-semibold ${
+                            approving === report._id
+                              ? "bg-gray-400 cursor-not-allowed"
+                              : "bg-emerald-700 hover:bg-emerald-800"
+                          }`}
+                        >
+                          {approving === report._id
+                            ? "Approving..."
+                            : "Approve Task"}
+                        </button>
+                      )}
                     </div>
 
-                    {/* 🖼️ Images Side-by-Side */}
+                    {/* 🖼️ Images */}
                     <div className="flex flex-col md:flex-row items-center gap-3 md:w-80">
                       {/* Task Image */}
                       <div className="flex flex-col items-center">

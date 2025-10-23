@@ -71,19 +71,11 @@ export default function StaffReporterList() {
       setLoading(false);
     }
   }
-
-  if (loading) {
-     return (
-       <div className="flex justify-center items-center h-screen bg-gray-50">
-         <Loading />
-       </div>
-     );
-   }
-  
-
   return (
     <div className="flex-1 h-screen overflow-auto flex flex-col justify-between text-sm">
-      <div className="md:p-10 p-4 space-y-10">
+     {loading?(
+      <Loading/>
+     ):(  <div className="md:p-10 p-4 space-y-10">
         <section>
           <h2 className="text-lg font-medium mb-3">Cleaner List</h2>
           <div className="overflow-x-auto">
@@ -147,7 +139,8 @@ export default function StaffReporterList() {
             </table>
           </div>
         </section>
-      </div>
+      </div>)}
+    
 
       <Footer />
     </div>

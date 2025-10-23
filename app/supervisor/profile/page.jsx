@@ -11,26 +11,47 @@ const SupervisorProfile = () => {
 
 
   const fetchSupervisor = async () => {
-    try {
-      const res = await fetch("/api/supervisor");
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message);
-      setSupervisor(data.supervisor || []);
-    } catch (error) {
-      setError("Something went wrong while loading data");
-    } finally {
-      setLoading(false);
-    }
-  };
-  useEffect(() => {
-    fetchSupervisor();
-  }, []);
+  try {
+    setLoading(true);
+    const res = await fetch("/api/supervisor");
+    const data = await res.json();
 
-  if (loading) return <Loading />;
+    if (!res.ok) throw new Error(data.message);
+
+    // ✅ Save fetched data to state and cache
+    setSupervisor(data.supervisor || []);
+    localStorage.setItem("supervisorData", JSON.stringify(data.supervisor || []));
+  } catch (error) {
+    console.warn("Error fetching supervisor data:", error.message);
+    setError("Something went wrong while loading data");
+  } finally {
+    setLoading(false);
+  }
+};
+
+useEffect(() => {
+  // 1️⃣ Load from localStorage first (if available)
+  const cached = localStorage.getItem("supervisorData");
+  if (cached) {
+    try {
+      setSupervisor(JSON.parse(cached));
+      setLoading(false);
+    } catch (err) {
+      console.warn("Invalid cached supervisor data:", err);
+    }
+  }
+
+  // 2️⃣ Then fetch fresh data
+  fetchSupervisor();
+}, []);
+
+
 
   return (
     <div className="flex-1 min-h-screen bg-slate-100 p-6 md:p-10">
-      <div className="bg-white shadow-xl max-w-md mx-auto rounded-lg overflow-hidden">
+      {loading?(
+        <Loading/>
+      ): ( <div className="bg-white shadow-xl max-w-md mx-auto rounded-lg overflow-hidden">
         {/* Profile Picture */}
         <div className="flex flex-col items-center p-6 bg-emerald-900 text-white">
           <Image
@@ -66,7 +87,8 @@ const SupervisorProfile = () => {
             Manage Reports
           </button>
         </div>
-      </div>
+      </div>)}
+     
     </div>
   );
 };

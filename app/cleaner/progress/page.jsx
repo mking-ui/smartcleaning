@@ -27,6 +27,7 @@ const CleanerProgress = () => {
       if (!res.ok) throw new Error(data.message || "Failed to load reports");
 
       setReports(data.reports || []);
+      localStorage.setItem("reports", JSON.stringify(data.reports));
     } catch (error) {
       console.error("Error fetching in-progress reports:", error);
       alert(error.message);
@@ -37,7 +38,11 @@ const CleanerProgress = () => {
 
   // ✅ Wait for session to load, then fetch reports
   useEffect(() => {
-    if (status === "loading") return;
+     const cached = localStorage.getItem("reports");
+    if (cached) {
+      setReports(JSON.parse(cached));
+      setLoading(false);
+    }
     if (!session?.user?.email) {
       alert("Session expired. Please log in again.");
       setLoading(false);

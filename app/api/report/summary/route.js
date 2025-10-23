@@ -1,28 +1,31 @@
+import { NextResponse } from "next/server";
 import connectDB from "@/config/db";
 import Report from "@/models/Report";
-import { NextResponse } from "next/server";
 
 export async function GET() {
   try {
     await connectDB();
 
-    // Fetch reports by correct statuses based on your schema
-    const [pending, inProgress, resolved] = await Promise.all([
+    // Fetch reports by correct statuses
+    const [pending, inProgress, resolved, approved] = await Promise.all([
       Report.find({ status: "Pending" }).lean(),
       Report.find({ status: "In Progress" }).lean(),
-      Report.find({ status: "Resolved" }).lean(), // ✅ changed from Completed to Resolved
+      Report.find({ status: "Resolved" }).lean(),
+      Report.find({ status: "Approved" }).lean(),
     ]);
 
-    // Summary for pie chart
+    // ✅ Summary for Pie Chart
     const summary = [
       { name: "Pending", value: pending.length, color: "#facc15" },
       { name: "In Progress", value: inProgress.length, color: "#3b82f6" },
       { name: "Completed", value: resolved.length, color: "#16a34a" },
+      { name: "Approved", value: approved.length, color: "#0ea5e9" },
     ];
 
-    // Weekly data for bar chart
-    const allReports = [...pending, ...inProgress, ...resolved];
+    // ✅ Weekly Jobs for Bar Chart
+    const allReports = [...pending, ...inProgress, ...resolved, ...approved];
     const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
     const weeklyJobs = days.map((day, index) => ({
       day,
       jobs: allReports.filter(

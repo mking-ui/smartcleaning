@@ -31,6 +31,7 @@ const ProgressReports = () => {
       }
 
       setReports(data.reports || []);
+       localStorage.setItem("reports", JSON.stringify(data.reports));
     } catch (error) {
       console.error("Error fetching reports:", error);
     } finally {
@@ -39,27 +40,21 @@ const ProgressReports = () => {
   };
 
   useEffect(() => {
-    // ✅ Wait until NextAuth session is ready before fetching
-   
-      // 🔁 Auto-refresh every 10 seconds
-      const interval = setInterval(fetchReports, 10000);
+      const cached = localStorage.getItem("reports");
+      if (cached) {
+        setReports(JSON.parse(cached));
+        setLoading(false);
+      }
+      fetchReports(); // Always refresh in the background
+      const interval = setInterval(fetchReports, 10000); // auto-refresh
       return () => clearInterval(interval);
-   
-  }, [status]);
+    }, [status]);
 
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-screen bg-gray-50">
-        <Loading />
-      </div>
-    );
-  }
- 
-
-  return (
+   return (
     <div className="flex-1 h-screen overflow-scroll flex flex-col justify-between text-sm">
-      
-      <div className="md:p-10 p-4">
+      {loading?(
+        <Loading/>
+      ):(<div className="md:p-10 p-4">
         <h2 className="text-lg font-bold text-emerald-900 mb-6">
           In-Progress Cleaning Tasks
         </h2>
@@ -112,7 +107,8 @@ const ProgressReports = () => {
             <p className="text-gray-500">No in-progress reports found.</p>
           )}
         </div>
-      </div>
+      </div>)}
+      
 
       <Footer />
     </div>

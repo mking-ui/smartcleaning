@@ -8,11 +8,9 @@ const UpdateProfileForm = ({ user }) => {
   const [email] = useState(user?.email || "");
   const [phone, setPhone] = useState(user?.phone || "");
   const [username, setUsername] = useState(user?.username || "");
-
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-
   const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -62,7 +60,9 @@ const UpdateProfileForm = ({ user }) => {
 
   return (
     <div className="flex-1 min-h-screen bg-slate-100 p-6 md:p-10">
-      <div className="bg-white shadow-xl max-w-3xl mx-auto p-6 rounded-lg">
+      {loading?(
+        <Loading/>
+      ):( <div className="bg-white shadow-xl max-w-3xl mx-auto p-6 rounded-lg">
         <h2 className="text-2xl font-bold text-emerald-900 mb-6 text-center">
           Update Profile
         </h2>
@@ -165,7 +165,8 @@ const UpdateProfileForm = ({ user }) => {
             {loading ? "Saving..." : "Save Changes"}
           </button>
         </form>
-      </div>
+      </div>)}
+     
 
       {/* Confirmation Modal */}
       {showConfirm && (

@@ -26,32 +26,29 @@ const CleanerCompleted = () => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Failed to fetch reports");
       setReports(data.reports || []);
-      //localStorage.setItem("reports", JSON.stringify(data.reports));
+         localStorage.setItem("reports", JSON.stringify(data.reports));
     } catch (error) {
       console.error("Error fetching completed reports:", error.message);
     } finally {
       setLoading(false);
     }
   };
-  useEffect(() => {
+ useEffect(() => {
     const cached = localStorage.getItem("reports");
     if (cached) {
       setReports(JSON.parse(cached));
       setLoading(false);
     }
-    if (status === "authenticated" && session?.user?.email) {
+   if (status === "authenticated" && session?.user?.email) {
       fetchReports(session.user.email);
-
-      // ✅ Auto-refresh every 5 seconds
-      const interval = setInterval(() => {
-        fetchReports(session.user.email);
-      }, 5000);
-
-      return () => clearInterval(interval);
-    }
+    } else if (status === "unauthenticated") {
+      router.push("/login");
+    }; // Always refresh in the background
+    const interval = setInterval(fetchReports, 10000); // auto-refresh
+    return () => clearInterval(interval);
   }, [status, session]);
 
-
+ 
 
   // ✅ Date formatter
   const formatDateTime = (dateString) => {
@@ -112,22 +109,16 @@ const CleanerCompleted = () => {
                           : "Unknown"}
                       </p>
                       <p className="text-sm text-gray-600">
-                        Completed On:{" "}
+                          Completed On:{" "}
                         {report?.updatedAt
                           ? formatDateTime(new Date(report.updatedAt))
                           : report?.proofImage?.url
                             ? "Awaiting timestamp..."
                             : "Not completed yet"}
                       </p>
-                      <p
-                        className={`text-xs font-semibold mt-1 px-2 py-1 rounded w-fit 
-    ${report.status === "Approved"
-                            ? "bg-blue-100 text-blue-700"
-                            : "bg-green-100 text-green-700"}`}
-                      >
-                        {report.status === "Approved" ? "Approved" : "Resolved"}
+                      <p className="text-xs font-semibold mt-1 px-2 py-1 rounded w-fit bg-green-100 text-green-700">
+                        Completed
                       </p>
-
                     </div>
 
                     {/* 🖼️ Right: Two Images (side-by-side) */}

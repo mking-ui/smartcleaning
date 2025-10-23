@@ -7,7 +7,7 @@ export async function GET() {
     await connectDB();
 
     const completedReports = await Report.find({
-      status: { $in: ["Resolved", "Completed"] },
+      status: { $in: ["Resolved", "Completed", "Approved"] },
     })
       .populate("assignedCleaner", "firstName surname email")
       .sort({ updatedAt: -1 });

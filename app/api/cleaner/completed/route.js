@@ -30,7 +30,7 @@ export async function GET(req) {
     // ✅ Fetch all completed (Resolved) reports assigned to this cleaner
     const reports = await Report.find({
       assignedCleaner: cleaner._id,
-      status: "Resolved",
+      status: { $in: ["Resolved", "Approved"] },
     })
       .populate("assignedCleaner", "firstName surname email")
       .sort({ updatedAt: -1 });
